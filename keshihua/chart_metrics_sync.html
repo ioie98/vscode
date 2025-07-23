@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>预测对比图</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        h1 {
+            color: #1f77b4;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        input[type="file"], input[type="date"] {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 15px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #1f77b4;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            vertical-align: middle;
+        }
+        button:hover {
+            background-color: #155d8b;
+        }
+
+        /* 横向排列评估指标 */
+        #metrics {
+            margin-top: 20px;
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            background-color: #f7f9fc;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+            user-select: none;
+        }
+        .metric {
+            background: #e1e8f7;
+            padding: 10px 15px;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 3px rgb(255 255 255 / 0.6);
+            white-space: nowrap;
+            transition: background-color 0.3s ease;
+            cursor: default;
+        }
+        .metric:hover {
+            background-color: #c4d1f5;
+        }
+
+        #chart {
+            margin-top: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+            background: white;
+            padding: 10px;
+        }
+
+        @media (max-width: 600px) {
+            #metrics {
+                flex-wrap: wrap;
+                gap: 15px;
+                font-size: 14px;
+            }
+            input[type="file"], input[type="date"], button {
+                margin-bottom: 10px;
+                width: 100%;
+                max-width: 320px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>预测数据分析</h1>
+    <label for="csvFile">选择CSV文件：</label>
+    <input type="file" id="csvFile" accept=".csv"><br><br>
+
+    <label for="chartStartDate">开始日期：</label>
+    <input type="date" id="chartStartDate">
+    <label for="chartEndDate">结束日期：</label>
+    <input type="date" id="chartEndDate">
+    <button onclick="updateChartRange()">更新范围</button>
+
+    <div id="metrics" aria-label="评估指标">
+        <div class="metric" id="rmse">RMSE: --</div>
+        <div class="metric" id="r2">R²: --</div>
+        <div class="metric" id="pod">POD: --</div>
+        <div class="metric" id="ts">TS: --</div>
+        <div class="metric" id="far">FAR: --</div>
+    </div>
+
+    <div id="chart"></div>
+
+    <script>
+        let csvData = [];
+        let currentData = [];
+
+        document.getElementById('csvFile').addEventListener('change', handleFile);
+
+        function handleFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split('\n');
+                csvData = lines.slice(1).map(line => {
+                    const [dateStr, trueVal, predVal] = line.split(',');
+                    return {
+                        date: new Date(dateStr),
+                        true: parseFloat(trueVal),
+                        pred: parseFloat(predVal)
+                    };
+                }).filter(d => !isNaN(d.date) && !isNaN(d.true) && !isNaN(d.pred));
+
+                if (csvData.length === 0) {
+                    alert('CSV文件格式错误或无有效数据');
+                    return;
+                }
+
+                currentData = csvData;
+                // 默认日期范围设为数据的最大最小值
+                const minDate = new Date(Math.min(...csvData.map(d => d.date)));
+                const maxDate = new Date(Math.max(...csvData.map(d => d.date)));
+                document.getElementById('chartStartDate').value = minDate.toISOString().slice(0,10);
+                document.getElementById('chartEndDate').value = maxDate.toISOString().slice(0,10);
+
+                const metrics = calculateMetrics(csvData);
+                updateMetricsDisplay(metrics);
+                updateChart(csvData);
+            };
+            reader.readAsText(file);
+        }
+
+        function calculateMetrics(data) {
+            const n = data.length;
+            if (n === 0) return {};
+
+            let mse = 0, meanTrue = 0, ssTot = 0, ssRes = 0;
+            let hits = 0, forecastYes = 0, observedYes = 0;
+
+            data.forEach(d => {
+                meanTrue += d.true;
+                forecastYes += d.pred >= 0.5 ? 1 : 0;
+                observedYes += d.true >= 0.5 ? 1 : 0;
+            });
+            meanTrue /= n;
+
+            data.forEach(d => {
+                mse += Math.pow(d.pred - d.true, 2);
+                ssTot += Math.pow(d.true - meanTrue, 2);
+                ssRes += Math.pow(d.true - d.pred, 2);
+                if (d.pred >= 0.5 && d.true >= 0.5) hits++;
+            });
+
+            const rmse = Math.sqrt(mse / n);
+            const r2 = ssTot === 0 ? 0 : 1 - (ssRes / ssTot);
+            const pod = observedYes ? hits / observedYes : 0;
+            const ts = (hits + (forecastYes - hits) + (observedYes - hits)) > 0 ?
+                hits / (hits + (forecastYes - hits) + (observedYes - hits)) : 0;
+            const far = forecastYes ? (forecastYes - hits) / forecastYes : 0;
+
+            return { rmse, r2, pod, ts, far };
+        }
+
+        function updateMetricsDisplay(metrics) {
+            if (!metrics || Object.keys(metrics).length === 0) {
+                document.getElementById('rmse').textContent = `RMSE: --`;
+                document.getElementById('r2').textContent = `R²: --`;
+                document.getElementById('pod').textContent = `POD: --`;
+                document.getElementById('ts').textContent = `TS: --`;
+                document.getElementById('far').textContent = `FAR: --`;
+                return;
+            }
+            document.getElementById('rmse').textContent = `RMSE: ${metrics.rmse.toFixed(4)}`;
+            document.getElementById('r2').textContent = `R²: ${metrics.r2.toFixed(4)}`;
+            document.getElementById('pod').textContent = `POD: ${metrics.pod.toFixed(4)}`;
+            document.getElementById('ts').textContent = `TS: ${metrics.ts.toFixed(4)}`;
+            document.getElementById('far').textContent = `FAR: ${metrics.far.toFixed(4)}`;
+        }
+
+        function updateChartRange() {
+            const chartStartDateInput = document.getElementById('chartStartDate').value;
+            const chartEndDateInput = document.getElementById('chartEndDate').value;
+
+            if (!chartStartDateInput || !chartEndDateInput) return alert('请选择有效的日期范围');
+
+            const startDate = new Date(chartStartDateInput);
+            startDate.setHours(0, 0, 0, 0);
+
+            const endDate = new Date(chartEndDateInput);
+            endDate.setHours(23, 59, 59, 999);
+
+            if (startDate > endDate) return alert('开始日期不能晚于结束日期');
+
+            const filteredData = csvData.filter(d => d.date >= startDate && d.date <= endDate);
+            if (filteredData.length === 0) return alert('所选日期范围内没有数据');
+
+            currentData = filteredData;
+
+            const metrics = calculateMetrics(filteredData);
+            updateMetricsDisplay(metrics);
+
+            updateChart(filteredData, startDate, endDate);
+
+            document.getElementById('chart').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function updateChart(data, startDateOverride = null, endDateOverride = null) {
+            const dates = data.map(d => d.date);
+            const trueValues = data.map(d => d.true);
+            const predValues = data.map(d => d.pred);
+
+            const trace1 = {
+                x: dates,
+                y: trueValues,
+                type: 'bar',
+                name: '真实值',
+                marker: { color: '#1f77b4' }
+            };
+
+            const trace2 = {
+                x: dates,
+                y: predValues,
+                type: 'bar',
+                name: '预测值',
+                marker: { color: '#ff7f0e' }
+            };
+
+            const chartStartDate = document.getElementById('chartStartDate').value;
+            const chartEndDate = document.getElementById('chartEndDate').value;
+
+            const displayStartDate = startDateOverride || (chartStartDate ? new Date(chartStartDate + 'T00:00:00') : dates[0]);
+            const displayEndDate = endDateOverride || (chartEndDate ? new Date(chartEndDate + 'T23:59:59') : dates[dates.length - 1]);
+
+            const layout = {
+                title: { text: '真实值 vs 预测值对比', font: { size: 18, color: '#1f77b4' } },
+                xaxis: {
+                    title: '日期',
+                    range: [displayStartDate, displayEndDate],
+                    rangeslider: { visible: true },
+                    type: 'date',
+                    tickangle: 0,
+                    tickformat: '%Y-%m-%d %H:%M'
+                },
+                yaxis: {
+                    title: '数值',
+                    rangemode: 'nonnegative'
+                },
+                barmode: 'group',
+                bargroupgap: 0.001,
+                hovermode: 'x unified',
+                template: 'plotly_white',
+                margin: { l: 60, r: 30, t: 80, b: 120 },
+                legend: {
+                    orientation: 'h',
+                    yanchor: 'bottom',
+                    y: 1.02,
+                    xanchor: 'right',
+                    x: 1
+                },
+                width: window.innerWidth * 0.9,
+                height: window.innerHeight * 0.9,
+                autosize: true
+            };
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+                toImageButtonOptions: {
+                    format: 'png',
+                    filename: 'prediction_chart',
+                    width: window.innerWidth * 0.9,
+                    height: window.innerHeight * 0.9,
+                    scale: 2
+                }
+            };
+
+            Plotly.newPlot('chart', [trace1, trace2], layout, config);
+
+            window.addEventListener('resize', function () {
+                const newWidth = document.getElementById('chart').offsetWidth || window.innerWidth * 0.9;
+                Plotly.relayout('chart', { width: newWidth, autosize: true });
+            });
+        }
+    </script>
+</body>
+</html>
