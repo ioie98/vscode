@@ -1,0 +1,740 @@
+<!-- <!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>预测分析</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    />
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #1f77b4;
+            color: white;
+            margin: 0;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .controls input,
+        .controls select,
+        .controls button {
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .controls button {
+            background-color: #1f77b4;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        .controls button:hover {
+            background-color: #155a91;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 15px;
+            font-size: 16px;
+            color: #1f77b4;
+            display: none;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+            animation: fadeUp 0.6s ease both;
+            user-select: none;
+        }
+
+        .metric b {
+            display: block;
+            font-size: 18px;
+            color: #1f77b4;
+            margin-bottom: 5px;
+        }
+
+        /* 悬浮波纹动画初始状态 */
+        .metric::after {
+            content: '';
+            position: absolute;
+            background: rgba(31, 119, 180, 0.3);
+            border-radius: 50%;
+            width: 0;
+            height: 0;
+            top: 50%;
+            left: 50%;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0);
+            transition: width 0.4s ease, height 0.4s ease, opacity 0.6s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 点击时波纹扩散 */
+        .metric:active::after {
+            width: 200px;
+            height: 200px;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            transition: none;
+        }
+
+        /* 悬浮时浮动和阴影，背景变色 */
+        .metric:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            background-color: #f0f8ff;
+            z-index: 1;
+        }
+
+        #chart {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 响应式支持：移动端下控件换行 */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls input,
+            .controls select,
+            .controls button {
+                width: 100%;
+            }
+
+            .metric {
+                font-size: 14px;
+            }
+
+            .metric b {
+                font-size: 16px;
+            }
+
+            #chart {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>预测分析</h1>
+    <div class="container">
+        <div class="controls">
+            <input type="file" id="fileInput" accept=".csv" />
+            <select id="freqSelect">
+                <option value="15min">15分钟</option>
+                <option value="1H">1小时</option>
+            </select>
+            <input type="text" id="startDate" placeholder="开始日期" />
+            <input type="text" id="endDate" placeholder="结束日期" />
+            <button onclick="render()">分析并绘图</button>
+        </div>
+
+        <div id="loading">📊 正在加载数据，请稍候...</div>
+
+        <div class="metrics" id="metrics"></div>
+        <div id="chart" style="height: 700px;"></div>
+    </div>
+
+    <script>
+        let rawData = [],
+            df15min = [];
+
+        function parseCSV(file) {
+            document.getElementById('loading').style.display = 'block';
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    rawData = results.data
+                        .map((row) => ({
+                            date: new Date(row.date),
+                            true: parseFloat(row.true || 0),
+                            pred: parseFloat(row.pred || 0),
+                        }))
+                        .filter((d) => !isNaN(d.date));
+                    if (rawData.length > 0) {
+                        document.getElementById('startDate')._flatpickr.setDate(
+                            rawData[0].date
+                        );
+                        document.getElementById('endDate')._flatpickr.setDate(
+                            rawData[rawData.length - 1].date
+                        );
+                        df15min = rawData;
+                    }
+                    document.getElementById('loading').style.display = 'none';
+                },
+            });
+        }
+
+        function aggregateHourly(data) {
+            let map = new Map();
+            data.forEach((d) => {
+                const t = new Date(d.date);
+                const h = new Date(Math.ceil(t.getTime() / 3600000) * 3600000);
+                const key = h.toISOString();
+                if (!map.has(key)) map.set(key, []);
+                map.get(key).push(d);
+            });
+
+            let hourly = [];
+            map.forEach((arr, key) => {
+                if (arr.length >= 4) {
+                    hourly.push({
+                        date: new Date(key),
+                        true: arr.reduce((s, x) => s + x.true, 0),
+                        pred: arr.reduce((s, x) => s + x.pred, 0),
+                    });
+                }
+            });
+            return hourly;
+        }
+
+        function computeMetrics(data, threshold = 0.1) {
+            const n = data.length;
+            if (n === 0) return {};
+
+            let mse = 0,
+                TP = 0,
+                FP = 0,
+                FN = 0;
+            const y = data.map((d) => d.true),
+                yhat = data.map((d) => d.pred);
+            const meanY = y.reduce((a, b) => a + b, 0) / n;
+            let ssRes = 0,
+                ssTot = 0;
+
+            for (let i = 0; i < n; i++) {
+                const t = y[i],
+                    p = yhat[i];
+                mse += (t - p) ** 2;
+                ssRes += (t - p) ** 2;
+                ssTot += (t - meanY) ** 2;
+
+                if (t > threshold && p > threshold) TP++;
+                if (t <= threshold && p > threshold) FP++;
+                if (t > threshold && p <= threshold) FN++;
+            }
+
+            const rmse = Math.sqrt(mse / n);
+            const r2 = ssTot === 0 ? NaN : 1 - ssRes / ssTot;
+            const pod = TP / (TP + FN) || NaN;
+            const far = TP + FP === 0 ? NaN : FP / (TP + FP);
+            const ts = TP / (TP + FN + FP) || NaN;
+
+            return { rmse, r2, pod, far, ts };
+        }
+
+        function render() {
+            const freq = document.getElementById('freqSelect').value;
+            const start = new Date(document.getElementById('startDate').value);
+            const end = new Date(document.getElementById('endDate').value);
+
+            let data = df15min.filter((d) => d.date >= start && d.date <= end);
+            if (freq === '1H') data = aggregateHourly(data);
+
+            const metrics = computeMetrics(data);
+            const labels = data.map((d) => d.date.toLocaleString());
+            const trueVals = data.map((d) => d.true);
+            const predVals = data.map((d) => d.pred);
+
+            Plotly.newPlot(
+                'chart',
+                [
+                    {
+                        x: labels,
+                        y: trueVals,
+                        name: '真实值',
+                        type: 'bar',
+                        marker: { color: '#1f77b4' },
+                    },
+                    {
+                        x: labels,
+                        y: predVals,
+                        name: '预测值',
+                        type: 'bar',
+                        marker: { color: '#ff7f0e' },
+                    },
+                ],
+                {
+                    barmode: 'group',
+                    title: `真实值 vs 预测值（${freq}）`,
+                    xaxis: {
+                        title: '时间',
+                        tickformat: '%H:%M',
+                        tickangle: -45,
+                        automargin: true,
+                        tickmode: 'auto',
+                        nticks: 6,
+                    },
+                    yaxis: { title: '数值' },
+                    hovermode: 'x unified',
+                    margin: { l: 60, r: 30, t: 60, b: 100 },
+                    responsive: true,
+                    height: 600,
+                }
+            );
+
+            const fmt = (x) => (isNaN(x) ? 'N/A' : x.toFixed(3));
+            document.getElementById('metrics').innerHTML = `
+        <div class="metric" title="均方根误差，值越小越好"><b>RMSE</b>${fmt(
+            metrics.rmse
+        )}</div>
+        <div class="metric" title="决定系数，反映拟合优度"><b>R²</b>${fmt(
+            metrics.r2
+        )}</div>
+        <div class="metric" title="命中率，预测中降水的比例"><b>POD</b>${fmt(
+            metrics.pod
+        )}</div>
+        <div class="metric" title="威胁得分，综合考虑命中、漏报和虚报"><b>TS</b>${fmt(
+            metrics.ts
+        )}</div>
+        <div class="metric" title="虚警率，值越低越好"><b>FAR</b>${fmt(metrics.far)}</div>
+        `;
+        }
+
+        flatpickr('#startDate', { dateFormat: 'Y-m-d' });
+        flatpickr('#endDate', { dateFormat: 'Y-m-d' });
+
+        document
+            .getElementById('fileInput')
+            .addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) parseCSV(file);
+            });
+    </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>预测分析平台</title>
+    <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    />
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 20px;
+            background-color: #1f77b4;
+            color: white;
+            margin: 0;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .controls input,
+        .controls select,
+        .controls button {
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .controls button {
+            background-color: #1f77b4;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        .controls button:hover {
+            background-color: #155a91;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 15px;
+            font-size: 16px;
+            color: #1f77b4;
+            display: none;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .metric {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            cursor: default;
+            animation: fadeUp 0.6s ease both;
+            user-select: none;
+        }
+
+        .metric b {
+            display: block;
+            font-size: 18px;
+            color: #1f77b4;
+            margin-bottom: 5px;
+        }
+
+        /* 悬浮波纹动画初始状态 */
+        .metric::after {
+            content: '';
+            position: absolute;
+            background: rgba(31, 119, 180, 0.3);
+            border-radius: 50%;
+            width: 0;
+            height: 0;
+            top: 50%;
+            left: 50%;
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0);
+            transition: width 0.4s ease, height 0.4s ease, opacity 0.6s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* 点击时波纹扩散 */
+        .metric:active::after {
+            width: 200px;
+            height: 200px;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+            transition: none;
+        }
+
+        /* 悬浮时浮动和阴影，背景变色 */
+        .metric:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            background-color: #f0f8ff;
+            z-index: 1;
+        }
+
+        #chart {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 响应式支持：移动端下控件换行 */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .controls input,
+            .controls select,
+            .controls button {
+                width: 100%;
+            }
+
+            .metric {
+                font-size: 14px;
+            }
+
+            .metric b {
+                font-size: 16px;
+            }
+
+            #chart {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>预测分析平台</h1>
+    <div class="container">
+        <div class="controls">
+            <input type="file" id="fileInput" accept=".csv" />
+            <select id="freqSelect">
+                <option value="15min">15分钟</option>
+                <option value="1H">1小时</option>
+            </select>
+            <input type="text" id="startDate" placeholder="开始日期" />
+            <input type="text" id="endDate" placeholder="结束日期" />
+            <button onclick="render()">分析并绘图</button>
+        </div>
+
+        <div id="loading">📊 正在加载数据，请稍候...</div>
+
+        <div class="metrics" id="metrics"></div>
+        <div id="chart" style="height: 700px;"></div>
+    </div>
+
+    <script>
+        let rawData = [],
+            df15min = [];
+
+        function parseCSV(file) {
+            document.getElementById('loading').style.display = 'block';
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    rawData = results.data
+                        .map((row) => ({
+                            date: new Date(row.date),
+                            true: parseFloat(row.true || 0),
+                            pred: parseFloat(row.pred || 0),
+                        }))
+                        .filter((d) => !isNaN(d.date));
+                    if (rawData.length > 0) {
+                        document.getElementById('startDate')._flatpickr.setDate(
+                            rawData[0].date
+                        );
+                        document.getElementById('endDate')._flatpickr.setDate(
+                            rawData[rawData.length - 1].date
+                        );
+                        df15min = rawData;
+                    }
+                    document.getElementById('loading').style.display = 'none';
+                },
+            });
+        }
+
+        function aggregateHourly(data) {
+            let map = new Map();
+            data.forEach((d) => {
+                const t = new Date(d.date);
+                const h = new Date(Math.ceil(t.getTime() / 3600000) * 3600000);
+                const key = h.toISOString();
+                if (!map.has(key)) map.set(key, []);
+                map.get(key).push(d);
+            });
+
+            let hourly = [];
+            map.forEach((arr, key) => {
+                if (arr.length >= 4) {
+                    hourly.push({
+                        date: new Date(key),
+                        true: arr.reduce((s, x) => s + x.true, 0),
+                        pred: arr.reduce((s, x) => s + x.pred, 0),
+                    });
+                }
+            });
+            return hourly;
+        }
+
+        function computeMetrics(data, threshold = 0.1) {
+            const n = data.length;
+            if (n === 0) return {};
+
+            let mse = 0,
+                TP = 0,
+                FP = 0,
+                FN = 0;
+            const y = data.map((d) => d.true),
+                yhat = data.map((d) => d.pred);
+            const meanY = y.reduce((a, b) => a + b, 0) / n;
+            let ssRes = 0,
+                ssTot = 0;
+
+            for (let i = 0; i < n; i++) {
+                const t = y[i],
+                    p = yhat[i];
+                mse += (t - p) ** 2;
+                ssRes += (t - p) ** 2;
+                ssTot += (t - meanY) ** 2;
+
+                if (t > threshold && p > threshold) TP++;
+                if (t <= threshold && p > threshold) FP++;
+                if (t > threshold && p <= threshold) FN++;
+            }
+
+            const rmse = Math.sqrt(mse / n);
+            const r2 = ssTot === 0 ? NaN : 1 - ssRes / ssTot;
+            const pod = TP / (TP + FN) || NaN;
+            const far = TP + FP === 0 ? NaN : FP / (TP + FP);
+            const ts = TP / (TP + FN + FP) || NaN;
+
+            return { rmse, r2, pod, far, ts };
+        }
+
+        function render() {
+            const freq = document.getElementById('freqSelect').value;
+            const start = new Date(document.getElementById('startDate').value);
+            const end = new Date(document.getElementById('endDate').value);
+
+            let data = df15min.filter((d) => d.date >= start && d.date <= end);
+            if (freq === '1H') data = aggregateHourly(data);
+
+            const metrics = computeMetrics(data);
+            const labels = data.map((d) => d.date.toLocaleString());
+            const trueVals = data.map((d) => d.true);
+            const predVals = data.map((d) => d.pred);
+
+            Plotly.newPlot(
+                'chart',
+                [
+                    {
+                        x: labels,
+                        y: trueVals,
+                        name: '真实值',
+                        type: 'bar',
+                        marker: { color: '#1f77b4' },
+                    },
+                    {
+                        x: labels,
+                        y: predVals,
+                        name: '预测值',
+                        type: 'bar',
+                        marker: { color: '#ff7f0e' },
+                    },
+                ],
+                {
+                    barmode: 'group',
+                    title: `真实值 vs 预测值（${freq}）`,
+                    xaxis: {
+                        title: '时间',
+                        tickformat: '%H:%M',
+                        tickangle: -45,
+                        automargin: true,
+                        tickmode: 'auto',
+                        nticks: 6,
+                    },
+                    yaxis: { title: '数值' },
+                    hovermode: 'x unified',
+                    margin: { l: 60, r: 30, t: 60, b: 100 },
+                    responsive: true,
+                    height: 600,
+                }
+            );
+
+            const fmt = (x) => (isNaN(x) ? 'N/A' : x.toFixed(3));
+            document.getElementById('metrics').innerHTML = `
+        <div class="metric" title="均方根误差，值越小越好"><b>RMSE</b>${fmt(
+            metrics.rmse
+        )}</div>
+        <div class="metric" title="决定系数，反映拟合优度"><b>R²</b>${fmt(
+            metrics.r2
+        )}</div>
+        <div class="metric" title="命中率，预测中降水的比例"><b>POD</b>${fmt(
+            metrics.pod
+        )}</div>
+        <div class="metric" title="威胁得分，综合考虑命中、漏报和虚报"><b>TS</b>${fmt(
+            metrics.ts
+        )}</div>
+        <div class="metric" title="虚警率，值越低越好"><b>FAR</b>${fmt(metrics.far)}</div>
+        `;
+        }
+
+        flatpickr('#startDate', { dateFormat: 'Y-m-d' });
+        flatpickr('#endDate', { dateFormat: 'Y-m-d' });
+
+        document
+            .getElementById('fileInput')
+            .addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) parseCSV(file);
+            });
+    </script>
+</body>
+</html>
