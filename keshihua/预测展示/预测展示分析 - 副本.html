@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <title>预测分析系统</title>
+    <script src="libs/plotly-2.32.0.min.js"></script>
+    <script src="libs/papaparse.min.js"></script>
+    <script src="libs/flatpickr.min.js"></script>
+    <link rel="stylesheet" href="libs/flatpickr.min.css" />
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(90deg, #1f77b4, #2980b9);
+            color: white;
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        h1::before {
+            content: "📈";
+            position: absolute;
+            left: 24px;
+            top: 22px;
+            font-size: 24px;
+        }
+
+        .container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #ffffff, #f5faff);
+            padding: 18px 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+            border: 1px solid #dce7f3;
+        }
+
+        .controls input,
+        .controls select,
+        .controls button {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .controls button {
+            background-color: #1f77b4;
+            color: white;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .controls button:hover {
+            background-color: #155a91;
+            transform: translateY(-2px);
+        }
+
+        .upload-btn {
+            background-color: #1f77b4;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.3s ease;
+            border: none;
+            display: inline-block;
+        }
+
+        .upload-btn:hover {
+            background-color: #155a91;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 15px;
+            font-size: 16px;
+            color: #1f77b4;
+            display: none;
+            user-select: none;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f77b4;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .metric {
+            background: linear-gradient(145deg, #fdfdfd, #e8f3ff);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            position: relative;
+            animation: fadeUp 0.6s ease both;
+            user-select: none;
+        }
+
+        .metric:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            background-color: #f0f8ff;
+            z-index: 1;
+        }
+
+        .metric b {
+            display: block;
+            font-size: 18px;
+            color: #1f77b4;
+            margin-bottom: 5px;
+        }
+
+        #chart {
+            background: linear-gradient(135deg, #ffffff, #f0f8ff);
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 25px;
+            transition: all 0.3s ease-in-out;
+            border: 1px solid #d8eafd;
+        }
+
+        #chart:hover {
+            transform: scale(1.01);
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1f77b4;
+            display: flex;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .metric-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #eee;
+            transition: all 0.3s;
+        }
+
+        .metric-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #e9f4ff;
+        }
+
+        .metric-box b {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #1f77b4;
+        }
+
+        .metric-box span {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .controls input,
+            .controls select,
+            .controls button {
+                width: 100%;
+            }
+            .dashboard {
+                flex-direction: column;
+            }
+            #chart {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>预测分析系统</h1>
+    <div class="container">
+        <div class="controls">
+            <label for="fileInput" class="upload-btn">上传CSV文件</label>
+            <input type="file" id="fileInput" accept=".csv" />
+            <select id="freqSelect">
+                <option value="15min">15分钟</option>
+                <option value="1H">1小时</option>
+            </select>
+            <input type="text" id="startDate" placeholder="开始日期" />
+            <input type="text" id="endDate" placeholder="结束日期" />
+            <button onclick="render()">分析并绘图</button>
+            <button onclick="resetDateRange()">重置时间范围</button>
+            <button onclick="setRecentDays(7)">近7天</button>
+            <button onclick="setRecentDays(30)">近30天</button>
+        </div>
+
+        <div id="loading"><span class="loader"></span>正在加载数据，请稍候...</div>
+        
+        <div class="dashboard">
+            <div class="panel">
+                <div class="panel-title"><i>💧</i>水利指标分析(小时级雨量)</div>
+                <div class="metrics-grid" id="waterMetrics">
+                    <div class="metric-box">
+                        <b>0-5mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计小时数: 0</span>
+                    </div>
+                    <div class="metric-box">
+                        <b>5-10mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计小时数: 0</span>
+                    </div>
+                    <div class="metric-box">
+                        <b>10-20mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计小时数: 0</span>
+                    </div>
+                    <div class="metric-box">
+                        <b>>20mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计小时数: 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics" id="metrics"></div>
+        
+        <div id="chart" style="height: 600px;"></div>
+    </div>
+
+    <script>
+        let rawData = [], df15min = [];
+
+        function parseDate(str) {
+            if (!str) return null;
+            const dateTimeParts = str.trim().split(' ');
+            // 既支持 2025-06-01 也支持 2025/6/1
+            const dateParts = dateTimeParts[0].includes('-')
+                ? dateTimeParts[0].split('-')
+                : dateTimeParts[0].split('/');
+
+            let h = 0, m = 0, s = 0;
+            if (dateTimeParts[1]) {
+                const timeParts = dateTimeParts[1].split(':');
+                h = parseInt(timeParts[0], 10) || 0;
+                m = parseInt(timeParts[1], 10) || 0;
+                s = parseInt(timeParts[2], 10) || 0;
+            }
+
+            return new Date(
+                parseInt(dateParts[0], 10),
+                parseInt(dateParts[1], 10) - 1,
+                parseInt(dateParts[2], 10),
+                h, m, s
+            );
+        }
+
+
+        function parseCSV(file) {
+            document.getElementById('loading').style.display = 'block';
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    rawData = results.data
+                        .map(row => ({
+                            date: parseDate(row.date),
+                            true: parseFloat(row.true || 0),
+                            pred: parseFloat(row.pred || 0)
+                        }))
+                        .filter(d => d.date instanceof Date && !isNaN(d.date));
+
+                    rawData.sort((a, b) => a.date - b.date);
+                    if (rawData.length > 0) {
+                        df15min = rawData;
+                        resetDateRange();
+                    }
+                    document.getElementById('loading').style.display = 'none';
+                }
+            });
+        }
+
+        function aggregateHourly(data) {
+            const result = [];
+            const hourMap = new Map();
+
+            data.forEach(d => {
+                // 将时间点往后推45分钟，再按整点小时聚合
+                const shiftedDate = new Date(d.date.getTime() + 45 * 60 * 1000);
+                const hourKey = new Date(shiftedDate);
+                hourKey.setMinutes(0, 0, 0);
+                const key = hourKey.getTime();
+
+                if (!hourMap.has(key)) {
+                    hourMap.set(key, {
+                        date: new Date(hourKey),
+                        trueVals: [],
+                        predVals: []
+                    });
+                }
+
+                const item = hourMap.get(key);
+                item.trueVals.push(d.true);
+                item.predVals.push(d.pred);
+            });
+
+            hourMap.forEach(item => {
+                result.push({
+                    date: item.date,
+                    true: item.trueVals.reduce((a, b) => a + b, 0),
+                    pred: item.predVals.reduce((a, b) => a + b, 0)
+                });
+            });
+
+            // 按日期排序，防止乱序
+            result.sort((a, b) => a.date - b.date);
+
+            return result;
+        }
+
+
+        function computeMetrics(data, threshold = 0.1) {
+            if (data.length === 0) return {};
+            
+            let mse = 0, mae = 0, tp = 0, fp = 0, fn = 0, tn = 0;
+            const y = data.map(d => d.true);
+            const yhat = data.map(d => d.pred);
+            const meanY = y.reduce((a, b) => a + b) / y.length;
+            
+            let ssRes = 0, ssTot = 0;
+            
+            for (let i = 0; i < data.length; i++) {
+                const t = y[i], p = yhat[i];
+                const error = t - p;
+                
+                mse += error * error;
+                mae += Math.abs(error);
+                ssRes += error * error;
+                ssTot += (t - meanY) ** 2;
+                
+                const tEvent = t > threshold;
+                const pEvent = p > threshold;
+                
+                if (tEvent && pEvent) tp++;
+                if (!tEvent && pEvent) fp++;
+                if (tEvent && !pEvent) fn++;
+                if (!tEvent && !pEvent) tn++;
+            }
+            
+            const n = data.length;
+            const rmse = Math.sqrt(mse / n);
+            const maeVal = mae / n;
+            const r2 = 1 - ssRes / ssTot;
+            
+            const pod = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+            const far = (fp + tp) > 0 ? fp / (fp + tp) : 0;
+            const ts = (tp + fn + fp) > 0 ? tp / (tp + fn + fp) : 0;
+            
+            return { 
+                rmse, 
+                mae: maeVal, 
+                r2, 
+                pod, 
+                far,
+                ts,
+            };
+        }
+
+        function computeWaterMetrics(data) {
+            const ranges = [
+                { min: 0, max: 5, name: '0-5mm' },
+                { min: 5, max: 10, name: '5-10mm' },
+                { min: 10, max: 20, name: '10-20mm' },
+                { min: 20, max: Infinity, name: '>20mm' }
+            ];
+            
+            return ranges.map(range => {
+                const rangeData = data.filter(d => 
+                    d.true >= range.min && d.true < range.max
+                );
+                
+                if (rangeData.length === 0) {
+                    return {
+                        name: range.name,
+                        mae: 0,
+                        rmse: 0,
+                        count: 0
+                    };
+                }
+                
+                const metrics = computeMetrics(rangeData);
+                return {
+                    name: range.name,
+                    mae: metrics.mae,
+                    rmse: metrics.rmse,
+                    count: rangeData.length
+                };
+            });
+        }
+
+        function updateWaterMetricsPanel(metrics) {
+            const container = document.getElementById('waterMetrics');
+            container.innerHTML = metrics.map(metric => `
+                <div class="metric-box">
+                    <b>${metric.name}</b>
+                    <span>MAE: ${metric.mae.toFixed(2)}<br>
+                          RMSE: ${metric.rmse.toFixed(2)}<br>
+                          累计小时数: ${metric.count}</span>
+                </div>
+            `).join('');
+        }
+
+        function render() {
+            const freq = document.getElementById('freqSelect').value;
+            const startStr = document.getElementById('startDate').value;
+            const endStr = document.getElementById('endDate').value;
+            
+            const startDate = parseDate(startStr);
+            const endDate = parseDate(endStr);
+            
+            if (!startDate || !endDate) {
+                alert('请选择有效的日期范围');
+                return;
+            }
+            
+            let dataRangeStart, dataRangeEnd;
+            
+            if (freq === '15min') {
+                dataRangeStart = new Date(startDate);
+                dataRangeStart.setHours(0, 0, 0, 0);
+                
+                dataRangeEnd = new Date(endDate);
+                dataRangeEnd.setHours(23, 45, 0, 0);
+            } else {
+                dataRangeStart = new Date(startDate);
+                dataRangeStart.setHours(1, 0, 0, 0);
+                
+                dataRangeEnd = new Date(endDate);
+                dataRangeEnd.setHours(23, 0, 0, 0);
+            }
+            
+            const processStart = new Date(dataRangeStart);
+            if (freq === '1H') {
+                processStart.setTime(processStart.getTime() - 45 * 60 * 1000);
+            }
+            
+            let data = df15min.filter(d => 
+                d.date >= processStart && d.date <= dataRangeEnd
+            );
+            
+            if (freq === '1H') {
+                data = aggregateHourly(data);
+            }
+            
+            data = data.filter(d => 
+                d.date >= dataRangeStart && d.date <= dataRangeEnd
+            );
+            
+            if (data.length === 0) {
+                alert('所选时间范围内没有数据');
+                return;
+            }
+            
+            const metrics = computeMetrics(data);
+            const waterMetrics = computeWaterMetrics(data);
+            
+            updateWaterMetricsPanel(waterMetrics);
+            
+            const fmt = x => isNaN(x) ? 'N/A' : x.toFixed(3);
+            document.getElementById('metrics').innerHTML = `
+                <div class="metric" title="均方根误差">
+                    <b>RMSE</b>${fmt(metrics.rmse)}
+                </div>
+                <div class="metric" title="决定系数">
+                    <b>R²</b>${fmt(metrics.r2)}
+                </div>
+                <div class="metric" title="威胁评分 (TS)">
+                    <b>TS</b>${fmt(metrics.ts)}
+                </div>
+                <div class="metric" title="命中率 (POD)">
+                    <b>POD</b>${fmt(metrics.pod)}
+                </div>
+                <div class="metric" title="虚警率 (FAR)">
+                    <b>FAR</b>${fmt(metrics.far)}
+                </div>
+            `;
+            
+            const labels = data.map(d => d.date.toLocaleString());
+            const trueVals = data.map(d => d.true);
+            const predVals = data.map(d => d.pred);
+            
+            Plotly.newPlot('chart', [
+                {
+                    x: labels,
+                    y: trueVals,
+                    name: '真实值',
+                    type: 'bar',
+                    marker: { color: '#1f77b4' }
+                },
+                {
+                    x: labels,
+                    y: predVals,
+                    name: '预测值',
+                    type: 'bar',
+                    marker: { color: '#ff7f0e' }
+                }
+            ], {
+                barmode: 'group',
+                title: `降水预测分析 (${freq === '15min' ? '15分钟' : '1小时'}数据)`,
+                xaxis: {
+                    title: '时间',
+                    tickangle: -45,
+                    nticks: 6,
+                    tickformat: '%Y-%m-%d %H:%M',
+                    automargin: true
+                },
+                yaxis: { title: '降水量 (mm)' },
+                hovermode: 'x unified',
+                margin: { l: 60, r: 30, t: 60, b: 100 },
+                height: 500
+            });
+        }
+
+        function resetDateRange() {
+            if (rawData.length === 0) return;
+            
+            const start = rawData[0].date;
+            const end = rawData[rawData.length - 1].date;
+            
+            const startStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')} 00:00`;
+            const endStr = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')} 00:00`;
+            
+            document.getElementById('startDate')._flatpickr.setDate(startStr);
+            document.getElementById('endDate')._flatpickr.setDate(endStr);
+            
+            render();
+        }
+
+        function setRecentDays(days) {
+            if (rawData.length === 0) return;
+            
+            const end = rawData[rawData.length - 1].date;
+            const start = new Date(end);
+            start.setDate(end.getDate() - days + 1);
+            
+            const startStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')} 00:00`;
+            const endStr = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')} 00:00`;
+            
+            document.getElementById('startDate')._flatpickr.setDate(startStr);
+            document.getElementById('endDate')._flatpickr.setDate(endStr);
+            
+            render();
+        }
+
+        flatpickr('#startDate', {
+            dateFormat: 'Y-m-d H:i',
+            enableTime: false,
+            time_24hr: false,
+            defaultHour: 0,
+            defaultMinute: 0
+        });
+        
+        flatpickr('#endDate', {
+            dateFormat: 'Y-m-d H:i',
+            enableTime: false,
+            time_24hr: false,
+            defaultHour: 0,
+            defaultMinute: 0
+        });
+
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) parseCSV(file);
+        });
+    </script>
+</body>
+</html>

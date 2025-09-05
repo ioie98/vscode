@@ -2,7 +2,6 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8" />
-    <title>预测分析系统</title>
     <script src="libs/plotly-2.32.0.min.js"></script>
     <script src="libs/papaparse.min.js"></script>
     <script src="libs/flatpickr.min.js"></script>
@@ -243,6 +242,26 @@
             line-height: 1.5;
         }
 
+        .file-name {
+            display: flex;
+            justify-content: center;    /* 水平居中 */
+            align-items: center;        /* 垂直居中 */
+            max-width: 200px;  
+            margin-left: 10px;
+            font-size: 14px;
+            color: #333;
+            vertical-align: middle;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; 
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #f9f9f9;
+            font-weight: bold;
+        }
+
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -268,6 +287,8 @@
         <div class="controls">
             <label for="fileInput" class="upload-btn">上传CSV文件</label>
             <input type="file" id="fileInput" accept=".csv" />
+            <span id="fileName" class="file-name">未选择文件</span>
+            
             <select id="freqSelect">
                 <option value="15min">15分钟</option>
                 <option value="1H">1小时</option>
@@ -279,6 +300,8 @@
             <button onclick="setRecentDays(7)">近7天</button>
             <button onclick="setRecentDays(30)">近30天</button>
         </div>
+
+
 
         <div id="loading"><span class="loader"></span>正在加载数据，请稍候...</div>
         
@@ -317,7 +340,11 @@
         function parseDate(str) {
             if (!str) return null;
             const dateTimeParts = str.trim().split(' ');
-            const dateParts = dateTimeParts[0].split('-');
+            // 既支持 2025-06-01 也支持 2025/6/1
+            const dateParts = dateTimeParts[0].includes('-')
+                ? dateTimeParts[0].split('-')
+                : dateTimeParts[0].split('/');
+
             let h = 0, m = 0, s = 0;
             if (dateTimeParts[1]) {
                 const timeParts = dateTimeParts[1].split(':');
@@ -325,6 +352,7 @@
                 m = parseInt(timeParts[1], 10) || 0;
                 s = parseInt(timeParts[2], 10) || 0;
             }
+
             return new Date(
                 parseInt(dateParts[0], 10),
                 parseInt(dateParts[1], 10) - 1,
@@ -332,6 +360,7 @@
                 h, m, s
             );
         }
+
 
         function parseCSV(file) {
             document.getElementById('loading').style.display = 'block';
@@ -647,8 +676,18 @@
 
         document.getElementById('fileInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
-            if (file) parseCSV(file);
+            const fileNameSpan = document.getElementById('fileName');
+            if (file) {
+                parseCSV(file);
+                fileNameSpan.textContent = file.name;
+                fileNameSpan.title = file.name; // 鼠标悬停时显示完整文件名
+            } else {
+                fileNameSpan.textContent = "未选择文件";
+                fileNameSpan.title = "";
+            }
         });
+
+
     </script>
 </body>
 </html>
