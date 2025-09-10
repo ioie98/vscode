@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <script src="{{ url_for('static', filename='libs/plotly-2.32.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='libs/papaparse.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='libs/flatpickr.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}" />
+
+    <title>预测分析系统 - 可视化</title>
+    <style>
+        body {
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        background-color: #0b1324;
+        color: #eaf0ff;
+    }
+
+    h1 {
+        margin: 0;
+        padding: 18px;
+        text-align: center;
+        background: linear-gradient(90deg, #2a81ff, #1f6be0);
+    }
+
+    .container {
+        padding: 20px;
+        max-width: 1400px;
+        margin: auto;
+    }
+
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-bottom: 16px;
+        background: #0f1a35;
+        padding: 14px;
+        border-radius: 12px;
+        border: 1px solid #1f2a46;
+    }
+
+    .controls input, .controls select, .controls button {
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid #2a385e;
+        background: #0a1224;
+        color: #eaf0ff;
+    }
+
+    .controls button {
+        background: linear-gradient(180deg, #2a81ff, #1f6be0);
+        border: 0;
+        cursor: pointer;
+    }
+
+    #chart {
+        background: #0f1a35;
+        border: 1px solid #1f2a46;
+        border-radius: 12px;
+        padding: 12px;
+        margin-top: 16px;
+    }
+
+    .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 16px 0;
+    }
+
+    .metric {
+        background: #0f1a35;
+        border: 1px solid #1f2a46;
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .dashboard {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin: 12px 0;
+    }
+
+    .panel {
+        flex: 1;
+        min-width: 300px;
+        background: #0f1a35;
+        border: 1px solid #1f2a46;
+        border-radius: 12px;
+        padding: 14px;
+    }
+
+    .panel-title {
+        font-size: 16px;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .metric-box {
+        background: #0a1224;
+        border: 1px solid #2a385e;
+        border-radius: 8px;
+        padding: 8px;
+        text-align: center;
+        margin-bottom: 4px;
+    }
+
+    .file-name {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        max-width: 220px;
+        margin-left: 10px;
+        font-size: 14px;
+        color: #eaf0ff;
+        border: 1px solid #2a385e;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #0a1224;
+    }
+    </style>
+</head>
+<body>
+<h1>预测分析系统 - 可视化</h1>
+<div class="container">
+    <div class="controls">
+        <label for="fileInput" class="upload-btn">上传CSV文件</label>
+        <input type="file" id="fileInput" accept=".csv" />
+        <span id="fileName" class="file-name">未选择文件</span>
+        <select id="freqSelect">
+            <option value="15min">15分钟</option>
+            <option value="1H">1小时</option>
+        </select>
+        <input type="text" id="startDate" placeholder="开始日期" />
+        <input type="text" id="endDate" placeholder="结束日期" />
+        <button onclick="render()">分析并绘图</button>
+        <button onclick="resetDateRange()">重置时间范围</button>
+        <button onclick="setRecentDays(7)">近7天</button>
+        <button onclick="setRecentDays(30)">近30天</button>
+    </div>
+
+    <div class="dashboard">
+        <div class="panel">
+            <div class="panel-title">💧 水利指标分析(小时级雨量)</div>
+            <div class="metrics-grid" id="waterMetrics">
+                <div class="metric-box">
+                    <div><b>0-5mm</b></div>
+                    <div>MAE: 0</div>
+                    <div>RMSE: 0</div>
+                    <div>累计小时数: 0</div>
+                </div>
+                <div class="metric-box">
+                    <div><b>5-10mm</b></div>
+                    <div>MAE: 0</div>
+                    <div>RMSE: 0</div>
+                    <div>累计小时数: 0</div>
+                </div>
+                <div class="metric-box">
+                    <div><b>10-20mm</b></div>
+                    <div>MAE: 0</div>
+                    <div>RMSE: 0</div>
+                    <div>累计小时数: 0</div>
+                </div>
+                <div class="metric-box">
+                    <div><b>>20mm</b></div>
+                    <div>MAE: 0</div>
+                    <div>RMSE: 0</div>
+                    <div>累计小时数: 0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metrics" id="metrics"></div>
+    <div id="chart" style="height: 600px;"></div>
+</div>
+
+<script>
+let rawData = [], df15min = [];
+function parseDate(str) {
+    if (!str) return null;
+    const dateTimeParts = str.trim().split(' ');
+    const dateParts = dateTimeParts[0].includes('-') ? dateTimeParts[0].split('-') : dateTimeParts[0].split('/');
+    let h = 0, m = 0, s = 0;
+    if (dateTimeParts[1]) {
+        const timeParts = dateTimeParts[1].split(':');
+        h = parseInt(timeParts[0], 10) || 0;
+        m = parseInt(timeParts[1], 10) || 0;
+        s = parseInt(timeParts[2], 10) || 0;
+    }
+    return new Date(parseInt(dateParts[0], 10), parseInt(dateParts[1], 10) - 1, parseInt(dateParts[2], 10), h, m, s);
+}
+function parseCSV(file) {
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+            rawData = results.data.map(row => ({
+                date: parseDate(row.date || row["时间"]),
+                true: parseFloat(row.true || row["实测雨量"] || 0),
+                pred: parseFloat(row.pred || row["预测雨量"] || 0)
+            })).filter(d => d.date instanceof Date && !isNaN(d.date));
+            rawData.sort((a, b) => a.date - b.date);
+            if (rawData.length > 0) {
+                df15min = rawData;
+                resetDateRange();
+            }
+        }
+    });
+}
+function aggregateHourly(data) {
+    const result = [];
+    const hourMap = new Map();
+    data.forEach(d => {
+        const shiftedDate = new Date(d.date.getTime() + 45 * 60 * 1000);
+        const hourKey = new Date(shiftedDate);
+        hourKey.setMinutes(0, 0, 0);
+        const key = hourKey.getTime();
+        if (!hourMap.has(key)) hourMap.set(key, {date: new Date(hourKey), trueVals: [], predVals: []});
+        const item = hourMap.get(key);
+        item.trueVals.push(d.true);
+        item.predVals.push(d.pred);
+    });
+    hourMap.forEach(item => {
+        result.push({date: item.date, true: item.trueVals.reduce((a, b) => a + b, 0), pred: item.predVals.reduce((a, b) => a + b, 0)});
+    });
+    result.sort((a, b) => a.date - b.date);
+    return result;
+}
+function computeMetrics(data, threshold = 0.1) {
+    if (data.length === 0) return {};
+    let mse = 0, mae = 0, tp = 0, fp = 0, fn = 0, tn = 0;
+    const y = data.map(d => d.true);
+    const yhat = data.map(d => d.pred);
+    const meanY = y.reduce((a, b) => a + b) / y.length;
+    let ssRes = 0, ssTot = 0;
+    for (let i = 0; i < data.length; i++) {
+        const t = y[i], p = yhat[i];
+        const error = t - p;
+        mse += error * error;
+        mae += Math.abs(error);
+        ssRes += error * error;
+        ssTot += (t - meanY) ** 2;
+        const tEvent = t > threshold;
+        const pEvent = p > threshold;
+        if (tEvent && pEvent) tp++;
+        if (!tEvent && pEvent) fp++;
+        if (tEvent && !pEvent) fn++;
+        if (!tEvent && !pEvent) tn++;
+    }
+    const n = data.length;
+    const rmse = Math.sqrt(mse / n);
+    const maeVal = mae / n;
+    const r2 = 1 - ssRes / ssTot;
+    const pod = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+    const far = (fp + tp) > 0 ? fp / (fp + tp) : 0;
+    const ts = (tp + fn + fp) > 0 ? tp / (tp + fn + fp) : 0;
+    return { rmse, mae: maeVal, r2, pod, far, ts };
+}
+function computeWaterMetrics(data) {
+    const ranges = [
+        { min: 0, max: 5, name: '0-5mm' },
+        { min: 5, max: 10, name: '5-10mm' },
+        { min: 10, max: 20, name: '10-20mm' },
+        { min: 20, max: Infinity, name: '>20mm' }
+    ];
+    return ranges.map(range => {
+        const rangeData = data.filter(d => d.true >= range.min && d.true < range.max);
+        if (rangeData.length === 0) {
+            return { name: range.name, mae: 0, rmse: 0, count: 0 };
+        }
+        const metrics = computeMetrics(rangeData);
+        return { name: range.name, mae: metrics.mae, rmse: metrics.rmse, count: rangeData.length };
+    });
+}
+function updateWaterMetricsPanel(metrics) {
+    const container = document.getElementById('waterMetrics');
+    container.innerHTML = metrics.map(metric => `
+        <div class="metric-box">
+            <div><b>${metric.name}</b></div>
+            <div>MAE: ${metric.mae.toFixed(2)}</div>
+            <div>RMSE: ${metric.rmse.toFixed(2)}</div>
+            <div>累计小时数: ${metric.count}</div>
+        </div>`).join('');
+}
+function render() {
+    const freq = document.getElementById('freqSelect').value;
+    const startStr = document.getElementById('startDate').value;
+    const endStr = document.getElementById('endDate').value;
+    const startDate = parseDate(startStr);
+    const endDate = parseDate(endStr);
+    if (!startDate || !endDate) { alert('请选择有效的日期范围'); return; }
+
+    let dataRangeStart, dataRangeEnd;
+    if (freq === '15min') {
+        dataRangeStart = new Date(startDate); dataRangeStart.setHours(0, 0, 0, 0);
+        dataRangeEnd = new Date(endDate); dataRangeEnd.setHours(23, 45, 0, 0);
+    } else {
+        dataRangeStart = new Date(startDate); dataRangeStart.setHours(1, 0, 0, 0);
+        dataRangeEnd = new Date(endDate); dataRangeEnd.setHours(23, 0, 0, 0);
+    }
+    const processStart = new Date(dataRangeStart);
+    if (freq === '1H') processStart.setTime(processStart.getTime() - 45 * 60 * 1000);
+
+    let data = df15min.filter(d => d.date >= processStart && d.date <= dataRangeEnd);
+    if (freq === '1H') data = aggregateHourly(data);
+    data = data.filter(d => d.date >= dataRangeStart && d.date <= dataRangeEnd);
+    if (data.length === 0) { alert('所选时间范围内没有数据'); return; }
+
+    const metrics = computeMetrics(data);
+    const waterMetrics = computeWaterMetrics(data);
+    updateWaterMetricsPanel(waterMetrics);
+    const fmt = x => isNaN(x) ? 'N/A' : x.toFixed(3);
+    document.getElementById('metrics').innerHTML = `
+        <div class="metric"><b>RMSE: </b>${fmt(metrics.rmse)}</div>
+        <div class="metric"><b>R²: </b>${fmt(metrics.r2)}</div>
+        <div class="metric"><b>TS: </b>${fmt(metrics.ts)}</div>
+        <div class="metric"><b>POD: </b>${fmt(metrics.pod)}</div>
+        <div class="metric"><b>FAR: </b>${fmt(metrics.far)}</div>`;
+
+    const labels = data.map(d => d.date.toLocaleString());
+    const trueVals = data.map(d => d.true);
+    const predVals = data.map(d => d.pred);
+    Plotly.newPlot('chart', [
+        { x: labels, y: trueVals, name: '真实值', type: 'bar' },
+        { x: labels, y: predVals, name: '预测值', type: 'bar' }
+    ], {
+        barmode: 'group',
+        title: `降水预测分析 (${freq === '15min' ? '15分钟' : '1小时'}数据)`,
+        xaxis: { title: '时间', tickangle: -45, nticks: 6, automargin: true },
+        yaxis: { title: '降水量 (mm)' },
+        hovermode: 'x unified',
+        margin: { l: 60, r: 30, t: 60, b: 100 },
+        height: 500
+    });
+}
+function resetDateRange() {
+    if (rawData.length === 0) return;
+    const start = rawData[0].date, end = rawData[rawData.length - 1].date;
+    const startStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')} 00:00`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')} 00:00`;
+    document.getElementById('startDate')._flatpickr.setDate(startStr);
+    document.getElementById('endDate')._flatpickr.setDate(endStr);
+    render();
+}
+function setRecentDays(days) {
+    if (rawData.length === 0) return;
+    const end = rawData[rawData.length - 1].date;
+    const start = new Date(end); start.setDate(end.getDate() - days + 1);
+    const startStr = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-${String(start.getDate()).padStart(2,'0')} 00:00`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-${String(end.getDate()).padStart(2,'0')} 00:00`;
+    document.getElementById('startDate')._flatpickr.setDate(startStr);
+    document.getElementById('endDate')._flatpickr.setDate(endStr);
+    render();
+}
+flatpickr('#startDate',{dateFormat:'Y-m-d H:i',enableTime:false,time_24hr:false,defaultHour:0,defaultMinute:0});
+flatpickr('#endDate',{dateFormat:'Y-m-d H:i',enableTime:false,time_24hr:false,defaultHour:0,defaultMinute:0});
+document.getElementById('fileInput').addEventListener('change',(e)=>{
+    const file = e.target.files[0];
+    const fileNameSpan = document.getElementById('fileName');
+    if (file) { parseCSV(file); fileNameSpan.textContent = file.name; fileNameSpan.title = file.name; }
+    else { fileNameSpan.textContent = "未选择文件"; fileNameSpan.title = ""; }
+});
+</script>
+</body>
+</html>

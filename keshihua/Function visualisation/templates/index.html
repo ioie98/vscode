@@ -1,0 +1,402 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>综合分析预测</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+  :root {
+      --bg: #0b1324;
+      --card: #121a2e;
+      --muted: #aab3c5;
+      --primary: #4ea1ff;
+      --ok: #1bb15a;
+      --warn: #ffb020;
+      --err: #ff5d5d;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1324, #0e1730 60%, #0a1023);
+      color: #eaf0ff;
+    }
+
+    h1 {
+      margin: 22px 0 6px;
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: .3px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, #141f38, #0e1830);
+      border: 1px solid #1f2a46;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, .35);
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 6px 0;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #2a385e;
+      background: #0a1224;
+      color: #eaf0ff;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #8a96b3;
+    }
+
+    .row button {
+      background: linear-gradient(180deg, #2a81ff, #1f6be0);
+      border: 0;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .row button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .log {
+      background: #0a1224;
+      border: 1px dashed #2a385e;
+      border-radius: 12px;
+      padding: 10px;
+      height: 120px;
+      overflow: auto;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+
+    .warn {
+      color: var(--warn);
+    }
+
+    .err {
+      color: var(--err);
+    }
+
+    .links a {
+      color: var(--primary);
+      text-decoration: none;
+      margin-right: 10px;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #09224a;
+      border: 1px solid #1f3d79;
+      color: #a9c7ff;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+
+    #card-merge .row label {
+      width: 120px;
+      color: #8a96b3;
+    }
+  </style>
+</head>
+<body>
+  <h1>综合分析预测</h1>
+  <div class="subtitle">点击各模块 → 填写参数 → 执行</div>
+  <div class="container">
+    <div class="grid">
+
+      <!-- 模块1：设备数据下载 -->
+      <div class="card" id="card-device">
+        <h3>设备数据下载 <span class="badge">ClickHouse</span></h3>
+        <div class="row"><input id="dev-start" placeholder="开始日期 YYYY-MM-DD" value=""></div>
+        <div class="row"><input id="dev-end" placeholder="结束日期 YYYY-MM-DD" value=""></div>
+        <div class="row"><input id="dev-list" placeholder="设备列表(逗号分隔)" value=""></div>
+        <details class="muted" style="margin:8px 0">
+          <summary>数据库连接(可选)</summary>
+          <div class="row"><input id="ch-host" placeholder="host" value="bytehouse.huoshan.accurain.cn"></div>
+          <div class="row"><input id="ch-port" placeholder="port" value="80"></div>
+          <div class="row"><input id="ch-user" placeholder="username" value="accurain_guest"></div>
+          <div class="row"><input id="ch-pass" placeholder="password" value="V3VuWS7%FWs@u"></div>
+          <div class="row"><input id="ch-db" placeholder="database" value="accurain"></div>
+        </details>
+        <div class="row"><button onclick="runDevice()">执行下载</button></div>
+        <div class="log" id="log-device"></div>
+      </div>
+
+      <!-- 模块2：荆楚水库数据处理 -->
+      <div class="card" id="card-jingchu">
+        <h3>荆楚水库数据处理</h3>
+        <div class="row"><input id="jc-input" placeholder="荆楚文件夹路径(./jingchu_data/8month)" value=""></div>
+        <div class="row"><input id="jc-data" placeholder="设备数据文件夹路径(./jingchu_data/data_8month)" value=""></div>
+        <div class="row"><input id="jc-pred" placeholder="中间文件夹路径(./jingchu_data/jingchu_result_8month)" value=""></div>
+        <div class="row"><input id="jc-out" placeholder="输出文件夹路径(./device_data_8month)" value=""></div>
+        <div class="row"><button onclick="runJingchu()">运行处理</button></div>
+        <div class="log" id="log-jingchu"></div>
+      </div>
+
+      <!-- 模块3：ERA5 下载 -->
+      <div class="card" id="card-era5">
+        <h3>ERA5 数据下载/处理 <span class="badge">ERA5-Land</span></h3>
+        <div class="row"><input id="era-device" placeholder="设备名" value=""></div>
+        <div class="row"><input id="era-sy" placeholder="开始年" value=""><input id="era-sm" placeholder="开始月" value=""></div>
+        <div class="row"><input id="era-ey" placeholder="结束年" value=""><input id="era-em" placeholder="结束月" value=""></div>
+        <div class="row"><input id="era-lat" placeholder="纬度" value=""><input id="era-lon" placeholder="经度" value=""></div>
+        <div class="row"><input id="era-area" placeholder="经纬度范围 北,西,南,东" value=""></div>
+        <div class="row"><button onclick="runERA5()">下载并处理</button></div>
+        <div class="log" id="log-era5"></div>
+      </div>
+
+      <!-- 模块4：R² / RMSE 计算 -->
+      <div class="card" id="card-metrics">
+        <h3>R² / RMSE 计算</h3>
+        <div class="row"><input id="met-start" placeholder="开始时间(可空) YYYY-MM-DD HH:MM"></div>
+        <div class="row"><input id="met-end" placeholder="结束时间(可空) YYYY-MM-DD HH:MM"></div>
+        <div class="row">
+          <input id="met-path" placeholder="CSV路径(或上传)" style="flex:1">
+          <input type="file" id="met-file" accept=".csv">
+        </div>
+        <div class="row"><button onclick="runMetrics()">计算指标</button></div>
+        <div class="log" id="log-metrics"></div>
+      </div>
+
+      <!-- 模块5：月度数据合并 -->
+
+    <div class="card" id="card-merge">
+      <h3>月度数据合并</h3>
+
+      <div class="row">
+        <label>A月文件:</label>
+        <input id="m-56" placeholder="./merge_month/5-6-extracted_files" value="">
+      </div>
+
+      <div class="row">
+        <label>B月文件:</label>
+        <input id="m-7" placeholder="./merge_month/7-extracted_files" value="">
+      </div>
+
+      <div class="row">
+        <label>C月文件:</label>
+        <input id="m-8" placeholder="./merge_month/8-extracted_files" value="">
+      </div>
+
+      <div class="row">
+        <label>合并文件:</label>
+        <input id="m-out" placeholder="./merge_month/5-8-merged_files" value="">
+      </div>
+
+
+      <div class="row" style="margin-top:10px;">
+        <button onclick="runMerge()">开始合并</button>
+      </div>
+
+      <div class="log" id="log-merge"></div>
+    </div>
+
+
+      <!-- 模块6：可视化 -->
+      <div class="card" id="card-viz">
+        <h3>可视化</h3>
+        <div class="row">
+          <a class="links" href="/visualize" target="_blank">打开可视化页面</a>
+        </div>
+        <div class="muted">在新页面上传 CSV(包含 date,true,pred 或 时间,实测雨量,预测雨量 列)。</div>
+      </div>
+
+    </div>
+  </div>
+
+<script>
+function log(el, text, cls=""){
+  const box = document.getElementById(el);
+  const span = document.createElement("div");
+  if(cls) span.className = cls;
+  span.textContent = text;
+  box.appendChild(span);
+  box.scrollTop = box.scrollHeight;
+}
+
+async function runDevice(){
+  const start = document.getElementById('dev-start').value.trim();
+  const end = document.getElementById('dev-end').value.trim();
+  const devs = document.getElementById('dev-list').value.trim().split(',').map(s=>s.trim()).filter(Boolean);
+  const cfg = {
+    host: document.getElementById('ch-host').value.trim(),
+    port: parseInt(document.getElementById('ch-port').value.trim() || "80",10),
+    username: document.getElementById('ch-user').value.trim(),
+    password: document.getElementById('ch-pass').value.trim(),
+    database: document.getElementById('ch-db').value.trim(),
+  };
+  document.getElementById('log-device').textContent="";
+  log('log-device', '开始执行...');
+  try{
+    const res = await fetch('/api/device-download', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({start_date:start, end_date:end, devices:devs, clickhouse_config:cfg})
+    });
+    const j = await res.json();
+    if(!j.ok){ log('log-device', '❌ ' + j.error, 'err'); return; }
+    log('log-device', '✅ 完成。输出：', 'ok');
+    j.results.forEach(r=>{
+      if(r.error){ log('log-device', r.device + ' -> 错误: ' + r.error, 'err'); }
+      else{
+        log('log-device', r.device + ' -> ' + r.folder);
+        r.files.forEach(f=> log('log-device', '  - ' + f));
+      }
+    });
+  }catch(e){
+    log('log-device', '❌ ' + e.message, 'err');
+  }
+}
+
+async function runJingchu(){
+  const payload = {
+    input_folder: document.getElementById('jc-input').value.trim(),
+    data_folder: document.getElementById('jc-data').value.trim(),
+    pred_folder: document.getElementById('jc-pred').value.trim(),
+    output_folder: document.getElementById('jc-out').value.trim(),
+  };
+  document.getElementById('log-jingchu').textContent="";
+  log('log-jingchu', '开始执行...');
+  try{
+    const res = await fetch('/api/jingchu-process', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j = await res.json();
+    if(!j.ok){ log('log-jingchu','❌ '+j.error,'err'); return; }
+    j.logs.forEach(t=>log('log-jingchu',t));
+    log('log-jingchu','✅ 完成','ok');
+    log('log-jingchu','预测输出: '+ j.pred_folder);
+    log('log-jingchu','合并输出: '+ j.output_folder);
+  }catch(e){ log('log-jingchu','❌ '+e.message,'err'); }
+}
+
+async function runERA5(){
+  const area = document.getElementById('era-area').value.trim().split(',').map(Number);
+  const payload = {
+    device: document.getElementById('era-device').value.trim(),
+    start_year: parseInt(document.getElementById('era-sy').value.trim()||"2025",10),
+    start_month: parseInt(document.getElementById('era-sm').value.trim()||"5",10),
+    end_year: parseInt(document.getElementById('era-ey').value.trim()||"2025",10),
+    end_month: parseInt(document.getElementById('era-em').value.trim()||"7",10),
+    target_lat: parseFloat(document.getElementById('era-lat').value.trim()||"31.39"),
+    target_lon: parseFloat(document.getElementById('era-lon').value.trim()||"115.04"),
+    area: area
+  };
+  document.getElementById('log-era5').textContent="";
+  log('log-era5','开始执行...');
+  try{
+    const res = await fetch('/api/era5-download', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j = await res.json();
+    if(!j.ok){ log('log-era5','❌ '+j.error,'err'); return; }
+    log('log-era5','✅ 完成','ok');
+    log('log-era5','输出: '+ j.file);
+  }catch(e){ log('log-era5','❌ '+e.message,'err'); }
+}
+
+async function runMetrics(){
+  const start = document.getElementById('met-start').value.trim();
+  const end = document.getElementById('met-end').value.trim();
+  const path = document.getElementById('met-path').value.trim();
+  const file = document.getElementById('met-file').files[0];
+
+  document.getElementById('log-metrics').textContent="";
+  log('log-metrics','开始计算...');
+
+  try{
+    let res, j;
+    if(file){
+      const fd = new FormData();
+      fd.append('file', file);
+      if(start) fd.append('start_date', start);
+      if(end) fd.append('end_date', end);
+      res = await fetch('/api/metrics', {method:'POST', body: fd});
+      j = await res.json();
+    }else{
+      res = await fetch('/api/metrics', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_path:path,start_date:start||null,end_date:end||null})});
+      j = await res.json();
+    }
+    if(!j.ok){ log('log-metrics','❌ '+j.error,'err'); return; }
+    log('log-metrics',`时间范围: ${j.start} ~ ${j.end}`);
+    log('log-metrics',`样本数: ${j.count}`);
+    log('log-metrics',`R²: ${j.r2.toFixed(4)}  RMSE: ${j.rmse.toFixed(4)} mm`,'ok');
+    if(j.csv_path) log('log-metrics','源文件: '+j.csv_path);
+  }catch(e){ log('log-metrics','❌ '+e.message,'err'); }
+}
+
+async function runMerge(){
+  const payload = {
+    folder_5_6: document.getElementById('m-56').value.trim(),
+    folder_7: document.getElementById('m-7').value.trim(),
+    folder_8: document.getElementById('m-8').value.trim(),
+    output_folder: document.getElementById('m-out').value.trim(),
+  };
+  document.getElementById('log-merge').textContent="";
+  log('log-merge','开始合并...');
+  try{
+    const res = await fetch('/api/merge-months', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j = await res.json();
+    if(!j.ok){ log('log-merge','❌ '+j.error,'err'); return; }
+    j.logs.forEach(t=>log('log-merge',t));
+    (j.outputs||[]).forEach(p=>log('log-merge','生成: '+p));
+    log('log-merge','✅ 完成','ok');
+  }catch(e){ log('log-merge','❌ '+e.message,'err'); }
+}
+</script>
+</body>
+</html>
