@@ -125,6 +125,30 @@ tbody tr:hover {
     font-size: 12px;
 }
 
+/* 删除按钮：红色 */
+.btn.delete-btn {
+    background-color: #dc3545;
+}
+.btn.delete-btn:hover {
+    background-color: #b71c1c;
+}
+
+/* 下载按钮：蓝色 */
+.btn.download-btn {
+    background-color: #007bff;
+}
+.btn.download-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 上传按钮：绿色 */
+.btn.upload-btn {
+    background-color: #28a745;
+}
+.btn.upload-btn:hover {
+    background-color: #1e7e34;
+}
+
 /* ---------- 弹框 ---------- */
 .modal-bg {
     position: fixed;
@@ -251,7 +275,7 @@ tbody tr:hover {
 
 /* 上传按钮大小统一 */
 .upload-column .upload-btn {
-    min-width: 100px;
+    min-width: 120px;
     padding: 6px 12px;
 }
 
@@ -266,6 +290,91 @@ tbody tr:hover {
 
 /* 下载按钮大小统一 */
 .download-column .download-btn {
-    padding: 8px 16px;
-    min-width: 100px;
+    padding: 6px 12px;        /* 内边距*/
+    min-width: 80px;          /* 最小宽度 */
+    max-width: 80px;         /* 最大宽度 */
+    width: auto;              /* 自适应文字宽度 */
+    font-size: 13px;          /* 与其他按钮统一 */
+}
+
+/* ----------站点标签样式 ---------- */
+.station-tag {
+    background: #007bff;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+.station-tag .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    padding-left: 4px;
+}
+
+#progressContainer {
+    width: 100%;
+    height: 10px;
+    background: #ddd;
+    border-radius: 6px;
+    margin-top: 10px;
+    overflow: hidden;
+}
+#progressBar {
+    height: 100%;
+    width: 0%;
+    background: #007bff;
+    transition: width 0.3s;
+}
+/* 高亮整合后的新文件行 */
+.highlight-row {
+    background-color: #fff3cd !important; 
+    transition: background-color 1.5s ease;
+}
+/* 下载模式选择按钮 */
+.download-mode {
+    display: flex;
+    gap: 10px;
+    margin: 10px 0 24px 0; 
+    align-items: center;
+}
+.download-mode label {
+    font-weight: 600;
+}
+.download-mode input {
+    margin-right: 4px;
+}
+/* 下载区域外层 */
+.download-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+    align-items: center;
+}
+
+/* 消息提示文字 */
+.message-box {
+    margin-right: 10px;
+    color: #f00;
+}
+/* ---------- 站点输入行 ---------- */
+.station-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+/* 外层容器：上下一点间距 */
+.station-tag-wrapper {
+    margin: 8px 0;
+}
+
+/* 标签容器：横向排列 + 自动换行 */
+.station-tags-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }

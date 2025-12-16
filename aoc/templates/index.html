@@ -2,7 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>数据准备与整合</title>
+<title>数据准备</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -11,18 +12,22 @@
 <!-- 顶部选择 -->
 <div class="top-selects">
     <label>项目：</label>
-    <select id="projectSelect">
-        <option>项目A</option>
-        <option>项目B</option>
-        <option>项目C</option>
-    </select>
+    <select id="projectSelect"></select>
+
     <label>站点：</label>
-    <input list="stationList" id="stationSelect" placeholder="输入或选择站点..." onchange="loadSiteDatasets()">
-    <datalist id="stationList">
-        <option value="b72"></option>
-        <option value="b99"></option>
-        <option value="b100"></option>
-    </datalist>
+
+    <!-- 按钮 -->
+    <div class="station-input-row">
+        <input list="stationList" id="stationSelect" placeholder="输入或选择站点..." onkeydown="onStationInputKeydown(event)">
+        <datalist id="stationList"></datalist>
+        <button class="btn" onclick="addStationFromInput()">添加到列表</button>
+        <button class="btn" onclick="clearStationList()">清空列表</button>
+    </div>
+</div>
+
+<!-- 显示已添加的站点标签 -->
+<div class="station-tag-wrapper">
+    <div id="stationTags" class="station-tags-container"></div>
 </div>
 
 <!-- 数据准备 -->
@@ -33,7 +38,7 @@
             <tr>
                 <th>数据类型</th>
                 <th>时间范围</th>
-                <th>上传状态</th>
+                <th>上传/下载状态</th>
                 <th>进度</th>
                 <th>操作</th>
             </tr>
@@ -51,7 +56,7 @@
                     <div class="upload-column">
                         <button class="btn upload-btn" onclick="openUploadModal('pwv')">上传 PWV</button>
                         <button class="btn upload-btn" onclick="openUploadModal('weather')">上传 气象</button>
-                        <button class="btn upload-btn" onclick="openUploadModal('rain')">上传 雨量筒</button>
+                        <button class="btn upload-btn" onclick="openUploadModal('rain')">上传 雨量</button>
                     </div>
                     <!-- 右侧下载按钮 -->
                     <div class="download-column">
@@ -64,10 +69,10 @@
                 <td>气象数据</td>
                 <td id="weatherTimeRange">2025/10/01 00:00 - 2025/10/21 12:00</td>
                 <td id="weatherStatus">未操作</td>
-                <td><div class="progress-bar"><div class="progress green" style="width:0%"></div></div></td>
+                <td><div class="progress-bar"><div class="progress blue" style="width:0%"></div></div></td>
             </tr>
             <tr>
-                <td>雨量筒数据</td>
+                <td>雨量数据</td>
                 <td id="rainTimeRange">2025/10/01 00:00 - 2025/10/21 12:00</td>
                 <td id="rainStatus">未操作</td>
                 <td><div class="progress-bar"><div class="progress blue" style="width:0%"></div></div></td>
@@ -75,18 +80,15 @@
         </tbody>
     </table>
 
-    <!-- 数据整合按钮右下角 -->
-    <div style="display:flex; justify-content:flex-end; margin-top:12px; align-items:center;">
-        <div id="messageBox" style="margin-right:10px; color:#f00;"></div>
-        <button class="btn" onclick="integrateData()">数据整合</button>
+    <!-- 合并按钮 -->
+    <div class="download-container">
+        <div id="messageBox" class="message-box"></div>
     </div>
 </div>
 
-
-
 <!-- 数据整合结果 -->
 <div class="section">
-    <h3>数据整合结果</h3>
+    <h3>数据详情</h3>
     <table>
         <thead>
             <tr>
@@ -105,7 +107,6 @@
         <div class="pagination" id="datasetPagination"></div>
     </div>
 </div>
-
 
 <!-- 弹框 -->
 <div class="modal-bg" id="modalBg">
