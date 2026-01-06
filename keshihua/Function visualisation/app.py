@@ -11,6 +11,8 @@ import threading
 import subprocess
 import time
 import requests
+import pytz
+import calendar
 
 
 try:
@@ -54,190 +56,188 @@ def save_upload(file_storage, subdir=""):
 # ---------------------------
 # Module 1: 设备数据下载
 # ---------------------------
-def device_query_and_process(start_date, end_date, devices, clickhouse_config):
-    if clickhouse_connect is None:
-        raise RuntimeError("clickhouse_connect 未安装或不可用")
-    import csv
-    import pytz
-    from datetime import datetime as dt
+import os, csv, pandas as pd, pytz, clickhouse_connect
+from datetime import datetime, timedelta
 
-    def convert_to_beijing_time(utc_time):
+def safe_folder_name(name):
+    return name.replace(':','-').replace(' ','_')
+
+def beijing_to_utc(date_str: str) -> str:
+    try:
+        # 这里要匹配完整的 "YYYY-MM-DD HH:MM:SS"
+        dt_beijing = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        # 北京时间 = UTC+8
+        dt_utc = dt_beijing - timedelta(hours=8)
+        return dt_utc.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        print(f"北京时间转UTC出错: {date_str}, 错误: {e}")
+        raise
+
+
+def convert_to_beijing_time(utc_time):
+    if isinstance(utc_time, pd.Timestamp):
+        utc_time = utc_time.tz_localize('UTC').tz_convert('Asia/Shanghai')
+        return utc_time.strftime('%Y-%m-%d %H:%M:%S')
+    elif isinstance(utc_time, datetime):
+        dt = utc_time.replace(tzinfo=pytz.utc).astimezone(pytz.timezone('Asia/Shanghai'))
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    elif isinstance(utc_time, str):
         try:
-            if isinstance(utc_time, pd.Timestamp):
-                utc_time = utc_time.tz_localize('UTC').tz_convert('Asia/Shanghai')
-                return utc_time.strftime('%Y-%m-%d %H:%M:%S')
-            try:
-                dtt = dt.strptime(utc_time, '%Y-%m-%d %H:%M:%S.%f')
-            except ValueError:
-                dtt = dt.strptime(utc_time, '%Y-%m-%d %H:%M:%S')
-            dtt = pytz.utc.localize(dtt).astimezone(pytz.timezone('Asia/Shanghai'))
-            return dtt.strftime('%Y-%m-%d %H:%M:%S')
-        except Exception as e:
-            print(f"时间转换错误: {utc_time}, 错误: {e}")
-            return utc_time
+            dt = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S.%f')
+        except ValueError:
+            dt = datetime.strptime(utc_time, '%Y-%m-%d %H:%M:%S')
+        dt = pytz.utc.localize(dt).astimezone(pytz.timezone('Asia/Shanghai'))
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        return str(utc_time)
 
-    end_datetime = f"{end_date} 23:59:59.999"
-    outputs = []
-    for device in devices:
-        folder_name = os.path.join(app.config['RESULT_FOLDER'], f"{device}_raw_data_{start_date}_to_{end_date}")
-        ensure_dir(folder_name)
-
-        try:
-            client = clickhouse_connect.get_client(**clickhouse_config)
-            print(f"连接ClickHouse成功，开始处理设备 {device} 数据...")
-
-            earliest_query = f"""
-                SELECT min(data_time)
-                FROM dwd_hws_data
-                WHERE data_time >= '{start_date} 00:00:00'
-                AND device = '{device}'
-            """
-            earliest_result = client.query(earliest_query)
-            earliest_time = earliest_result.result_rows[0][0] if earliest_result.result_rows else None
-            if earliest_time is None:
-                print(f"设备 {device} 无数据，跳过。")
+def get_closest_records(df, dev_col='device', time_col='data_time'):
+    target_minutes = [0,15,30,45]
+    df = df.copy()
+    df['hour'] = df[time_col].dt.floor('h')
+    closest_rows = []
+    for hour in df['hour'].unique():
+        df_hour = df[df['hour']==hour].copy()
+        for m in target_minutes:
+            target_time = hour + timedelta(minutes=m)
+            if df_hour.empty:
                 continue
-            print(f"设备 {device} 最早数据时间: {earliest_time}")
-            start_datetime = earliest_time
+            df_hour['time_diff'] = (df_hour[time_col]-target_time).abs()
+            idx_min = df_hour['time_diff'].idxmin()
+            row = df_hour.loc[idx_min].copy()
+            row[time_col] = target_time
+            closest_rows.append(row)
+    if closest_rows:
+        return pd.DataFrame(closest_rows).drop(columns=['hour','time_diff'], errors='ignore').sort_values(time_col).reset_index(drop=True)
+    else:
+        return pd.DataFrame()
 
+def query_and_process(start_date, end_date, devices, clickhouse_config):
+    results = []
+    start_full = start_date + ' 00:00:00'
+    end_full = end_date + ' 23:59:59'
+
+    base_folder = "./results"
+    os.makedirs(base_folder, exist_ok=True)
+
+    for device in devices:
+        try:
+            # 每个设备单独子文件夹
+            folder_name = safe_folder_name(f"{device}_raw_data_{start_full}_to_{end_full}")
+            device_folder = os.path.join(base_folder, folder_name)
+            os.makedirs(device_folder, exist_ok=True)
+
+            client = clickhouse_connect.get_client(**clickhouse_config)
+
+            # --- 查询 HWS ---
             hws_query = f"""
-                SELECT data_time, device, Pa, Rc, Ta, Ua
-                FROM dwd_hws_data
-                WHERE data_time BETWEEN '{start_datetime}' AND '{end_datetime}'
-                AND device = '{device}'
-                ORDER BY data_time
+            SELECT data_time, device, Pa, Rc, Ta, Ua
+            FROM dwd_hws_data
+            WHERE data_time BETWEEN '{beijing_to_utc(start_full)}' AND '{beijing_to_utc(end_full)}'
+            AND device='{device}' ORDER BY data_time
             """
             hws_result = client.query(hws_query)
             hws_df = pd.DataFrame(hws_result.result_rows, columns=hws_result.column_names)
-            hws_df['data_time'] = pd.to_datetime(hws_df['data_time'])
+            if not hws_df.empty:
+                hws_df['data_time'] = pd.to_datetime(hws_df['data_time'].apply(convert_to_beijing_time))
+            raw_hws_file = os.path.join(device_folder, f'dwd_hws_data_raw_{device}.csv')
+            hws_df.to_csv(raw_hws_file, index=False, quoting=csv.QUOTE_NONNUMERIC)
 
-            raw_hws_file = os.path.join(folder_name, f'dwd_hws_data_raw_{device}.csv')
-            hws_df.to_csv(raw_hws_file, index=False, quoting=1)  # QUOTE_NONNUMERIC
-
+            # --- 查询 PWV ---
             pwv_query = f"""
-                SELECT data_time, device, pwv
-                FROM dwd_pwv_data
-                WHERE data_time BETWEEN '{start_datetime}' AND '{end_datetime}'
-                AND device = '{device}'
-                ORDER BY data_time
+            SELECT data_time, device, pwv
+            FROM dwd_pwv_data
+            WHERE data_time BETWEEN '{beijing_to_utc(start_full)}' AND '{beijing_to_utc(end_full)}'
+            AND device='{device}' ORDER BY data_time
             """
             pwv_result = client.query(pwv_query)
             pwv_df = pd.DataFrame(pwv_result.result_rows, columns=pwv_result.column_names)
-            pwv_df['data_time'] = pd.to_datetime(pwv_df['data_time'])
-            raw_pwv_file = os.path.join(folder_name, f'dwd_pwv_data_raw_{device}.csv')
-            pwv_df.to_csv(raw_pwv_file, index=False, quoting=1)
+            if not pwv_df.empty:
+                pwv_df['data_time'] = pd.to_datetime(pwv_df['data_time'].apply(convert_to_beijing_time))
+            raw_pwv_file = os.path.join(device_folder, f'dwd_pwv_data_raw_{device}.csv')
+            pwv_df.to_csv(raw_pwv_file, index=False, quoting=csv.QUOTE_NONNUMERIC)
 
-            predict_query = f"""
-                SELECT predict_time, device, real_rainfall_transient,predict_rainfall
-                FROM dwd_predict_real_data
-                WHERE data_time BETWEEN '{start_datetime}' AND '{end_datetime}'
-                AND device = '{device}'
-                ORDER BY predict_time
+            # --- 查询预测数据 ---
+            pred_query = f"""
+            SELECT predict_time, device, real_rainfall_transient, predict_rainfall
+            FROM dwd_predict_real_data
+            WHERE predict_time BETWEEN '{beijing_to_utc(start_full)}' AND '{beijing_to_utc(end_full)}'
+            AND device='{device}' ORDER BY predict_time
             """
-            predict_result = client.query(predict_query)
-            predict_df = pd.DataFrame(predict_result.result_rows, columns=predict_result.column_names)
-            predict_df['predict_time'] = pd.to_datetime(predict_df['predict_time'])
-            raw_predict_file = os.path.join(folder_name, f'dwd_predict_real_data_raw_{device}.csv')
-            predict_df.to_csv(raw_predict_file, index=False, quoting=1)
+            pred_result = client.query(pred_query)
+            pred_df = pd.DataFrame(pred_result.result_rows, columns=pred_result.column_names)
+            if not pred_df.empty:
+                pred_df['predict_time'] = pd.to_datetime(pred_df['predict_time'].apply(convert_to_beijing_time))
+            raw_pred_file = os.path.join(device_folder, f'dwd_predict_real_data_raw_{device}.csv')
+            pred_df.to_csv(raw_pred_file, index=False, quoting=csv.QUOTE_NONNUMERIC)
 
-            def get_closest_records(df, dev):
-                target_minutes = [0, 15, 30, 45]
-                df = df[df['device'] == dev].copy()
-                df = df.sort_values('data_time')
-                df['hour'] = df['data_time'].dt.floor('h')
-                closest_rows = []
-                for hour in df['hour'].unique():
-                    df_hour = df[df['hour'] == hour].copy()
-                    for m in target_minutes:
-                        target_time = hour + pd.Timedelta(minutes=m)
-                        if df_hour.empty:
-                            continue
-                        df_hour['time_diff'] = (df_hour['data_time'] - target_time).abs()
-                        idx_min = df_hour['time_diff'].idxmin()
-                        closest_row = df_hour.loc[idx_min].copy()
-                        closest_row['data_time'] = target_time
-                        closest_rows.append(closest_row)
-                closest_df = pd.DataFrame(closest_rows)
-                return closest_df.drop(columns=['hour', 'time_diff'], errors='ignore').sort_values('data_time').reset_index(drop=True)
+            # --- 取最接近 00/15/30/45 分钟 ---
+            hws_closest = get_closest_records(hws_df)
+            pwv_closest = get_closest_records(pwv_df, time_col='data_time')
 
-            hws_closest = get_closest_records(hws_df, device)
-            pwv_closest = get_closest_records(pwv_df, device)
-
+            # --- 合并 HWS + PWV ---
             merged_df = pd.merge(
                 hws_closest,
-                pwv_closest[['data_time', 'pwv']],
+                pwv_closest[['data_time','pwv']],
                 on='data_time',
                 how='inner'
             )
+            merged_df = merged_df.rename(columns={'data_time':'date','Pa':'sp','Rc':'tp','Ta':'t2m','Ua':'rh'})
 
-            merged_df = merged_df.rename(columns={
-                'data_time': 'date',
-                'Pa': 'sp',
-                'Rc': 'tp',
-                'Ta': 't2m',
-                'Ua': 'rh'
-            })
-
-            predict_df = predict_df.rename(columns={'predict_time': 'date'})
-            predict_df['date'] = pd.to_datetime(predict_df['date'])
+            # --- 合并预测 ---
+            pred_df = pred_df.rename(columns={'predict_time':'date'})
             merged_df['date'] = pd.to_datetime(merged_df['date'])
-
             merged_df = pd.merge(
                 merged_df,
-                predict_df[['date', 'real_rainfall_transient']],
+                pred_df[['date','real_rainfall_transient']],
                 on='date',
                 how='left'
             )
             merged_df['tp'] = merged_df['real_rainfall_transient'].fillna(0)
             merged_df.drop(columns=['real_rainfall_transient'], inplace=True)
 
-            final_cols = ['date', 't2m', 'sp', 'rh', 'pwv', 'tp']
+            final_cols = ['date','t2m','sp','rh','pwv','tp']
             merged_df = merged_df[final_cols]
-            output_file = os.path.join(folder_name, f'dwd_hws_data_{device}_result.csv')
-            merged_df.to_csv(output_file, index=False, quoting=1)
 
-            outputs.append({
+            output_file = os.path.join(device_folder, f'dwd_hws_data_{device}_result.csv')
+            merged_df.to_csv(output_file, index=False, quoting=csv.QUOTE_NONNUMERIC)
+
+            results.append({
                 "device": device,
-                "folder": folder_name,
-                "files": [
-                    os.path.basename(raw_hws_file),
-                    os.path.basename(raw_pwv_file),
-                    os.path.basename(raw_predict_file),
-                    os.path.basename(output_file),
-                ]
+                "folder": device_folder,
+                "files": [raw_hws_file, raw_pwv_file, raw_pred_file, output_file]
             })
-
         except Exception as e:
-            traceback.print_exc()
-            outputs.append({"device": device, "error": str(e)})
+            results.append({"device": device, "error": str(e)})
 
-    return outputs
+    return results
 
 
-@app.post("/api/device-download")
-def api_device_download():
-    data = request.get_json(force=True)
-    start_date = data.get("start_date")
-    end_date = data.get("end_date")
-    devices = data.get("devices", [])
-    ch_cfg = data.get("clickhouse_config", {
-        'host': 'bytehouse.huoshan.accurain.cn',
-        'port': 80,
-        'username': 'accurain_guest',
-        'password': 'V3VuWS7%FWs@u',
-        'database': 'accurain'
-    })
-    if not start_date or not end_date or not devices:
-        return json_err("缺少必要参数：start_date/end_date/devices")
+
+from flask import request, jsonify
+
+@app.route("/api/query-devices", methods=["POST"])
+def api_query_devices():
     try:
-        outputs = device_query_and_process(start_date, end_date, devices, ch_cfg)
-        return json_ok(results=outputs)
+        data = request.get_json(force=True)
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+        devices = data.get("devices", [])
+        clickhouse_cfg = data.get("clickhouse_config")
+
+        if not clickhouse_cfg:
+            return jsonify({"ok": False, "error": "缺少 ClickHouse 配置"})
+
+        results = query_and_process(start_date, end_date, devices, clickhouse_cfg)
+        return jsonify({"ok": True, "results": results})
     except Exception as e:
-        return json_err(str(e))
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(e)})
+
 
 
 # ---------------------------
-# Module 2: 荆楚水库数据处理
+# Module 2: 荆楚水库数据合并
 # ---------------------------
 
 def jingchu_process(input_folder, data_folder, pred_folder, output_folder):
@@ -368,130 +368,157 @@ def api_jingchu_process():
 # Module 3: ERA5 下载与处理
 # ---------------------------
 
+# 常量定义
+land_vars = ['2m_temperature', '2m_dewpoint_temperature', 'surface_pressure', 'total_precipitation']
+pressure_vars = ['specific_humidity']
+pressure_levels = ['1000', '925', '850', '700', '500', '300']
+g = 9.80665  # 重力加速度
+
+
+def download_era5_controlled(area_name, year, month, bbox, output_nc_dir, delay=2):
+    """
+    下载 ERA5-Land 和 ERA5-Pressure 数据（自动跳过已存在的文件）
+    """
+    area_dir = os.path.join(output_nc_dir, area_name)
+    os.makedirs(area_dir, exist_ok=True)
+
+    days_in_month = calendar.monthrange(year, month)[1]
+    day_list = [f"{d:02d}" for d in range(1, days_in_month + 1)]
+
+    # === ERA5-Land ===
+    fn_land = os.path.join(area_dir, f"era5_land_{year}_{month:02d}.nc")
+    if not os.path.exists(fn_land):
+        cdsapi.Client().retrieve("reanalysis-era5-land", {
+            "variable": land_vars,
+            "year": str(year),
+            "month": f"{month:02d}",
+            "day": day_list,
+            "time": [f"{h:02d}:00" for h in range(24)],
+            "data_format": "netcdf",
+            "download_format": "unarchived",
+            "area": bbox
+        }, fn_land)
+        print(f"[{area_name}] ERA5-Land 下载完成: {fn_land}")
+        time.sleep(delay)
+    else:
+        print(f"[{area_name}] 文件已存在: {fn_land}")
+
+    # === ERA5-Pressure ===
+    fn_press = os.path.join(area_dir, f"era5_press_{year}_{month:02d}.nc")
+    if not os.path.exists(fn_press):
+        cdsapi.Client().retrieve("reanalysis-era5-pressure-levels", {
+            "product_type": "reanalysis",
+            "variable": pressure_vars,
+            "pressure_level": pressure_levels,
+            "year": str(year),
+            "month": f"{month:02d}",
+            "day": day_list,
+            "time": [f"{h:02d}:00" for h in range(24)],
+            "data_format": "netcdf",
+            "download_format": "unarchived",
+            "area": bbox
+        }, fn_press)
+        print(f"[{area_name}] ERA5-Pressure 下载完成: {fn_press}")
+        time.sleep(delay)
+    else:
+        print(f"[{area_name}] 文件已存在: {fn_press}")
+
+    return fn_land, fn_press
+
+
+def process_and_save_csv(device_name, lat, lon, nc_files, area_name, output_dir):
+    """
+    读取 ERA5 Land + Pressure 数据，计算 PWV、RH 等并保存为 CSV。
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    buffer = []
+
+    for fn_land, fn_press in nc_files:
+        with xr.open_dataset(fn_land) as ds_land, xr.open_dataset(fn_press) as ds_press:
+            time_coord = 'valid_time'
+            times = ds_land[time_coord].values
+
+            # ---- PWV 计算 ----
+            q = ds_press['q'].sel(latitude=lat, longitude=lon, method='nearest')
+            p_levels = ds_press['pressure_level'].values * 100  # Pa
+            sort_idx = np.argsort(-p_levels)
+            p_sorted = p_levels[sort_idx]
+
+            pwv_list = []
+            for t_idx, t_val in enumerate(times):
+                q_t = q.isel({time_coord: t_idx}).values
+                q_sorted = q_t[sort_idx]
+                dp = p_sorted[:-1] - p_sorted[1:]
+                pwv = np.sum((q_sorted[:-1] + q_sorted[1:]) / 2 * dp) / g
+                pwv_list.append(pwv)
+
+            # ---- Land 变量 ----
+            t2m_vals = ds_land['t2m'].sel(latitude=lat, longitude=lon, method='nearest').values
+            d2m_vals = ds_land['d2m'].sel(latitude=lat, longitude=lon, method='nearest').values
+            sp_vals  = ds_land['sp'].sel(latitude=lat, longitude=lon, method='nearest').values
+            tp_vals  = ds_land['tp'].sel(latitude=lat, longitude=lon, method='nearest').values  # 累计降水 (m)
+
+            tp_series = pd.Series(tp_vals, index=times)
+            tp_diff = tp_series.diff().fillna(0).clip(lower=0) * 1000  # mm
+
+            # ---- 转为 15 分钟时间间隔 ----
+            for t_idx, t_val in enumerate(times):
+                tp_hour_mm = float(tp_diff.iloc[t_idx])
+                t2m_val = float(t2m_vals[t_idx])
+                d2m_val = float(d2m_vals[t_idx])
+                sp_val = float(sp_vals[t_idx])
+                pwv_val = float(pwv_list[t_idx])
+
+                t2m_c = t2m_val - 273.15
+                dew_c = d2m_val - 273.15
+                rh = float(np.exp((17.269 * dew_c) / (237.3 + dew_c) -
+                                  (17.269 * t2m_c) / (237.3 + t2m_c)) * 100)
+                rh = min(max(rh, 0), 100)
+
+                tp_15min = tp_hour_mm / 4
+                for i in range(4):
+                    dt = pd.to_datetime(str(t_val)) - pd.Timedelta(hours=1) + pd.Timedelta(minutes=15 * (i + 1))
+                    buffer.append({
+                        'date': dt,
+                        't2m': t2m_c,
+                        'sp': sp_val / 100,  # hPa
+                        'rh': rh,
+                        'pwv': pwv_val,
+                        'tp': tp_15min
+                    })
+
+    df = pd.DataFrame(buffer)
+    for col in ['t2m', 'sp', 'rh', 'pwv', 'tp']:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+
+    csv_file = os.path.join(output_dir, f"{device_name}_pressure_land.csv")
+    df.to_csv(csv_file, index=False)
+    print(f"[完成] 设备 {device_name} 数据保存到: {csv_file}")
+    return csv_file
+
+
 def era5_download_and_process(device, start_year, start_month, end_year, end_month, target_lat, target_lon, area):
-    if cdsapi is None or xr is None:
-        raise RuntimeError("cdsapi/xarray 未安装或不可用，请在部署环境安装，并配置 ~/.cdsapirc")
-    import pandas as pd
+    """
+    主函数：下载 Land + Pressure 数据并合并处理成 CSV。
+    """
+    output_nc_dir = os.path.join(app.config['RESULT_FOLDER'], "nc", f"{device}")
+    output_csv_dir = os.path.join(app.config['RESULT_FOLDER'], "六要素数据")
+    ensure_dir(output_nc_dir)
+    ensure_dir(output_csv_dir)
 
-    def download_month_data(year, month, target_lat, target_lon, area):
-        output_dir = os.path.join(app.config['RESULT_FOLDER'], "nc", f"{device}")
-        ensure_dir(output_dir)
-        output_filename = os.path.join(output_dir, f"era5_data_{year}_{str(month).zfill(2)}.nc")
+    area_name = f"area_{device}"
+    nc_files_all = []
 
-        if month == 2:
-            days = 28
-        elif month in [4, 6, 9, 11]:
-            days = 30
-        else:
-            days = 31
-        day_list = [str(d).zfill(2) for d in range(1, days + 1)]
-
-        if not os.path.exists(output_filename):
-            request = {
-                "variable": [
-                    "total_precipitation",
-                    "2m_temperature",
-                    "surface_pressure",
-                    "2m_dewpoint_temperature"
-                ],
-                "year": str(year),
-                "month": [str(month).zfill(2)],
-                "day": day_list,
-                "time": [f"{h:02d}:00" for h in range(24)],
-                "data_format": "netcdf",
-                "download_format": "unarchived",
-                "area": area
-            }
-            client = cdsapi.Client()
-            client.retrieve("reanalysis-era5-land", request, output_filename)
-        return output_filename
-
-    def process_month_data(filename, year, month, target_lat, target_lon):
-        ds = xr.open_dataset(filename)
-
-        if month == 2:
-            days = 28
-        elif month in [4, 6, 9, 11]:
-            days = 30
-        else:
-            days = 31
-
-        start_date = f"{year}-{str(month).zfill(2)}-01"
-        end_date = f"{year}-{str(month).zfill(2)}-{days}"
-        time_slice = slice(start_date, end_date)
-
-        variables = {
-            'tp': 'total_precipitation',
-            't2m': '2m_temperature',
-            'sp': 'surface_pressure',
-            'd2m': '2m_dewpoint_temperature'
-        }
-
-        df = pd.DataFrame()
-        for var, name in variables.items():
-            time_filtered = ds[var].sel(valid_time=time_slice)
-            data = time_filtered.sel(latitude=target_lat, longitude=target_lon, method='nearest')
-            temp_df = data.to_dataframe(name=name).reset_index()
-            if df.empty:
-                df = temp_df[['valid_time', name]]
-            else:
-                df = pd.merge(df, temp_df[['valid_time', name]], on='valid_time')
-
-        df['temp_c'] = df['2m_temperature'] - 273.15
-        df['dewpoint_c'] = df['2m_dewpoint_temperature'] - 273.15
-
-        df['rh'] = 100 * np.exp(
-            (17.269 * df['dewpoint_c']) / (237.3 + df['dewpoint_c']) -
-            (17.269 * df['temp_c']) / (237.3 + df['temp_c'])
-        ).clip(0, 100)
-
-        df['e'] = 6.112 * np.exp((17.67 * df['dewpoint_c']) / (df['dewpoint_c'] + 243.5))
-        df['pwv'] = (0.14 * df['e'] * (df['surface_pressure'] / 100)) / (df['temp_c'] + 273.15)
-        df['pwv'] = df['pwv'].clip(0, 100)
-
-        df['tp'] = (df['total_precipitation'] * 1000).diff().fillna(0).clip(lower=0)
-        df['pressure'] = df['surface_pressure'] / 100
-        df['date'] = df['valid_time'] + pd.Timedelta(hours=8)
-
-        final_df = pd.DataFrame({
-            'date': df['date'],
-            't2m': df['temp_c'],
-            'sp': df['pressure'],
-            'rh': df['rh'],
-            'pwv': df['pwv'],
-            'tp': df['tp']
-        })
-        return final_df
-
-    output_csv = os.path.join(app.config['RESULT_FOLDER'], "六要素数据")
-    ensure_dir(output_csv)
-    output_csv = os.path.join(output_csv, f"{device}.csv")
-
-    all_data = pd.DataFrame()
     for year in range(start_year, end_year + 1):
         start_m = start_month if year == start_year else 1
         end_m = end_month if year == end_year else 12
         for month in range(start_m, end_m + 1):
-            fn = download_month_data(year, month, target_lat, target_lon, area)
-            month_df = process_month_data(fn, year, month, target_lat, target_lon)
-            all_data = pd.concat([all_data, month_df], ignore_index=True)
+            nc_pair = download_era5_controlled(area_name, year, month, area, output_nc_dir, delay=2)
+            nc_files_all.append(nc_pair)
 
-    all_data = all_data.sort_values('date')
-    all_data['date'] = pd.to_datetime(all_data['date'])
-    all_data.set_index('date', inplace=True)
-    new_index = pd.date_range(
-        start=all_data.index.min() - pd.Timedelta(minutes=45),
-        end=all_data.index.max(),
-        freq='15min'
-    )
-    all_data = all_data.reindex(new_index, method='bfill')
-    all_data['hour_group'] = all_data.index.floor('h')
-    for col in ['tp']:
-        all_data[col] = all_data.groupby('hour_group')[col].transform(lambda x: x / 4)
-    all_data = all_data.drop(columns=['hour_group']).reset_index().rename(columns={'index':'date'})
-    all_data.to_csv(output_csv, index=False)
+    csv_file = process_and_save_csv(device, target_lat, target_lon, nc_files_all, area_name, output_csv_dir)
+    return csv_file
 
-    return output_csv
 
 @app.post("/api/era5-download")
 def api_era5_download():
@@ -608,40 +635,72 @@ def api_metrics():
 # Module 5: 月度数据合并
 # ---------------------------
 
-def merge_months(folder_5_6, folder_7, folder_8, output_folder):
+def merge_months(folders, output_folder):
+    """
+    folders: 列表，包含用户填写的文件夹路径
+    output_folder: 输出文件夹
+    """
     ensure_dir(output_folder)
-    files_56 = set(os.listdir(folder_5_6)) if os.path.isdir(folder_5_6) else set()
-    files_7 = set(os.listdir(folder_7)) if os.path.isdir(folder_7) else set()
-    files_8 = set(os.listdir(folder_8)) if os.path.isdir(folder_8) else set()
-    all_files = files_56.union(files_7).union(files_8)
 
+    # 收集每个文件夹的文件列表
+    files_list = []
+    for folder in folders:
+        if os.path.isdir(folder):
+            files_list.append(set(os.listdir(folder)))
+        else:
+            files_list.append(set())
+
+    # 所有文件取并集
+    all_files = set().union(*files_list)
     logs = [f"找到 {len(all_files)} 个文件"]
     outputs = []
 
     for filename in all_files:
         dfs = []
-        for folder in [folder_5_6, folder_7, folder_8]:
-            if filename in (files_56 if folder==folder_5_6 else files_7 if folder==folder_7 else files_8):
+        for i, folder in enumerate(folders):
+            if filename in files_list[i]:
                 dfs.append(pd.read_csv(os.path.join(folder, filename), sep=","))
 
         if not dfs:
             continue
 
+        # 删除全为空的列
         dfs = [df.dropna(axis=1, how='all') for df in dfs if not df.empty]
         if dfs:
             df_all = pd.concat(dfs, ignore_index=True)
         else:
             df_all = pd.DataFrame()
 
-        df_all = pd.concat(dfs, ignore_index=True)
         if "date" in df_all.columns:
-            df_all["date"] = pd.to_datetime(df_all["date"])
-            df_all = df_all.sort_values(by="date").reset_index(drop=True)
-            df_all = df_all.drop_duplicates(subset="date", keep="first")
+            try:
+                # 修改这里：处理两种日期格式
+                df_all["date"] = pd.to_datetime(
+                    df_all["date"], 
+                    format='mixed',  # 自动处理混合格式
+                    errors='coerce'  # 转换失败设为NaT
+                )
+                
+                # 删除转换失败的日期行
+                original_count = len(df_all)
+                df_all = df_all.dropna(subset=["date"])
+                if len(df_all) < original_count:
+                    logs.append(f"文件 {filename}: 删除了 {original_count - len(df_all)} 行无效日期数据")
+                
+                # 按日期排序并去重
+                df_all = df_all.sort_values(by="date").reset_index(drop=True)
+                df_all = df_all.drop_duplicates(subset="date", keep="first")
+                
+            except Exception as e:
+                logs.append(f"文件 {filename} 日期处理失败: {str(e)}")
+                # 继续处理，但不进行日期相关的操作
 
-        out_path = os.path.join(output_folder, filename)
-        df_all.to_csv(out_path, index=False, encoding="utf-8")
-        outputs.append(out_path)
+        try:
+            out_path = os.path.join(output_folder, filename)
+            df_all.to_csv(out_path, index=False, encoding="utf-8")
+            outputs.append(out_path)
+            logs.append(f"成功合并文件: {filename}")
+        except Exception as e:
+            logs.append(f"保存文件 {filename} 失败: {str(e)}")
 
     return logs, outputs
 
@@ -649,23 +708,34 @@ def merge_months(folder_5_6, folder_7, folder_8, output_folder):
 @app.route("/api/merge-months", methods=["POST"])
 def api_merge_months():
     data = request.get_json(force=True)
-    folder_5_6 = data.get("folder_5_6", "./merge_month/5-6-extracted_files")
-    folder_7 = data.get("folder_7", "./merge_month/7-extracted_files")
-    folder_8 = data.get("folder_8", "./merge_month/8-extracted_files")
-    output_folder = data.get("output_folder", "./merge_month/5-8-merged_files")
+    folder_5_6 = data.get("folder_5_6", "").strip()
+    folder_7 = data.get("folder_7", "").strip()
+    folder_8 = data.get("folder_8", "").strip()
+    output_folder = data.get("output_folder", "").strip()
 
-    folder_5_6 = os.path.abspath(folder_5_6)
-    folder_7 = os.path.abspath(folder_7)
-    folder_8 = os.path.abspath(folder_8)
+    # 输出文件夹必须填写
+    if not output_folder:
+        return json_err("输出文件夹路径不能为空")
+
+    # 收集非空输入文件夹
+    folders = [f for f in [folder_5_6, folder_7, folder_8] if f]
+
+    # 至少填写两个文件夹
+    if len(folders) < 2:
+        return json_err("请至少填写两个需要合并的文件夹路径")
+
+    # 转换为绝对路径
+    folders = [os.path.abspath(f) for f in folders]
     output_folder = os.path.abspath(output_folder)
-
     ensure_dir(output_folder)
+
     try:
-        logs, outputs = merge_months(folder_5_6, folder_7, folder_8, output_folder)
+        logs, outputs = merge_months(folders, output_folder)
         return json_ok(logs=logs, outputs=outputs, output_folder=output_folder)
     except Exception as e:
         traceback.print_exc()
         return json_err(str(e))
+
 
 
 # ---------------------------
