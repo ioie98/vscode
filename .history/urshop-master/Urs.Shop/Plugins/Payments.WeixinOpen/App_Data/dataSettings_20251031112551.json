@@ -1,0 +1,5 @@
+﻿{
+  "DataProvider": "mysql",
+  "DataConnectionString": "server=100.64.0.26;port=3306;database=demo.urshop.cn;user id=demo.urshop;password=HekCradnGEBF4ihe;persistsecurityinfo=False;allowuservariables=True;defaultcommandtimeout=30000;connectiontimeout=30000",
+  "RawDataSettings": {}
+}

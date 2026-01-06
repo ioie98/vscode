@@ -1,0 +1,206 @@
+/* ---------- 页面整体样式 ---------- */
+body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
+.top-selects {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.top-selects label {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.top-selects select,
+.top-selects input {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    outline: none;
+    font-size: 14px;
+}
+
+.section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.section h3 {
+    border-left: 5px solid #007bff;
+    padding-left: 10px;
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #007bff;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: fixed;
+}
+
+th, td {
+    border: 1px solid #e0e0e0;
+    padding: 10px;
+    text-align: center;
+    font-size: 13px;
+    word-wrap: break-word;
+}
+
+th {
+    background: linear-gradient(90deg, #f7f7f7, #e9f1ff);
+    font-weight: 600;
+}
+
+tbody tr:hover {
+    background: #f1f5fb;
+}
+
+.progress-bar {
+    height: 10px;
+    background: #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.progress {
+    height: 10px;
+    transition: width 0.4s ease;
+    border-radius: 6px;
+}
+
+.progress.blue { background: #2196f3; }
+.progress.green { background: #4caf50; }
+
+.btn {
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s;
+}
+
+.btn:hover { background: #0056b3; }
+.btn.red { background: #dc3545; }
+.btn.red:hover { background: #b71c1c; }
+
+.modal-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.3);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    animation: popup 0.25s ease-out;
+}
+
+@keyframes popup {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.drag-area {
+    border: 2px dashed #007bff;
+    border-radius: 6px;
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+.drag-area.dragover { background: #e0f0ff; }
+
+.pagination {
+    text-align: right;
+    margin-top: 10px;
+}
+
+.pagination button {
+    margin-left: 5px;
+    padding: 4px 10px;
+    border: none;
+    background: #f0f0f0;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+
+.pagination button:hover,
+.pagination button.active {
+    background: #007bff;
+    color: #fff;
+}
+
+.toast-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #4caf50;
+    color: #fff;
+    padding: 16px 30px;
+    border-radius: 8px;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+@media screen and (max-width: 768px) {
+    .top-selects {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* ---------- 下载弹框内容 ---------- */
+.modal-body-section {
+    margin-bottom: 12px;
+}
+
+.modal-body-section label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.modal-body-section select {
+    width: 100%;
+    padding: 6px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}

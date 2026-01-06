@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="model_train.css">
+</head>
+<body>
+    <div class="module-page">
+        <div class="train-card">
+            <h3>模型训练参数配置</h3>
+            <div class="grid">
+                <div class="item"><label>seq_len</label><input type="number" value="96"></div>
+                <div class="item"><label>label_len</label><input type="number" value="48"></div>
+                <div class="item"><label>pred_len</label><input type="number" value="96"></div>
+                <div class="item"><label>d_model</label><input type="number" value="512"></div>
+                <div class="item"><label>batch_size</label><input type="number" value="32"></div>
+                <div class="item"><label>learning_rate</label><input type="text" value="0.0001"></div>
+            </div>
+            <div style="margin-top:30px">
+                <button class="btn-start">开始训练 (重新计算 R)</button>
+                <button class="btn-fine">参数微调 (优化 M)</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

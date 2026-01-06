@@ -1,0 +1,92 @@
+<template>
+  <div class="app-container">
+    <!-- 顶部操作栏 -->
+    <div style="margin-bottom: 20px;">
+        <el-button type="primary" @click="dialogVisible = true">我要报修</el-button>
+    </div>
+
+    <!-- 数据表格 -->
+    <el-table :data="tableData" border style="width: 100%">
+      <el-table-column prop="id" label="单号" width="80"></el-table-column>
+      <el-table-column prop="title" label="标题"></el-table-column>
+      <el-table-column prop="address" label="宿舍地址"></el-table-column>
+      <el-table-column prop="studentName" label="报修人"></el-table-column>
+      <el-table-column prop="createTime" label="时间"></el-table-column>
+      <el-table-column label="状态">
+        <template slot-scope="scope">
+          <el-tag v-if="scope.row.status === 0" type="danger">待派单</el-tag>
+          <el-tag v-else-if="scope.row.status === 1" type="warning">维修中</el-tag>
+          <el-tag v-else type="success">已完成</el-tag>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 弹窗：新增报修 -->
+    <el-dialog title="申请报修" :visible.sync="dialogVisible">
+      <el-form :model="form" label-width="80px">
+        <el-form-item label="标题">
+          <el-input v-model="form.title"></el-input>
+        </el-form-item>
+        <el-form-item label="宿舍">
+          <el-input v-model="form.address" placeholder="例如: 1号楼305"></el-input>
+        </el-form-item>
+        <el-form-item label="详情">
+          <el-input type="textarea" v-model="form.content"></el-input>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitRepair">确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import axios from 'axios'; // 记得 npm install axios
+
+export default {
+  data() {
+    return {
+      tableData: [],
+      dialogVisible: false,
+      form: {
+        title: '',
+        address: '',
+        content: '',
+        studentId: 2 // 模拟当前登录的学生ID，实际开发中从缓存或Cookie获取
+      }
+    };
+  },
+  created() {
+    this.fetchData();
+  },
+  methods: {
+    // 获取列表
+    fetchData() {
+      axios.get('http://localhost:8080/api/repair/list')
+        .then(response => {
+          // 这里假设后端返回格式是 {code:200, data: [...]}
+          this.tableData = response.data.data;
+        });
+    },
+    // 提交报修
+    submitRepair() {
+      axios.post('http://localhost:8080/api/repair/add', this.form)
+        .then(response => {
+          this.$message.success('报修成功');
+          this.dialogVisible = false;
+          this.fetchData(); // 刷新列表
+          // 清空表单
+          this.form = { title: '', address: '', content: '', studentId: 2 };
+        });
+    }
+  }
+};
+</script>
+
+<style scoped>
+.app-container {
+    padding: 20px;
+}
+</style>

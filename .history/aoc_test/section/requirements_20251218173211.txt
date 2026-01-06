@@ -1,0 +1,6 @@
+pandas
+aiohttp
+numpy
+# 如果你代码里用了 tqdm，加上它；如果在生产环境去掉了，可忽略
+tqdm 
+# pendulum 和 airflow 已经是内置的，通常不需要写，但写上也无妨

@@ -1,0 +1,17 @@
+.module-page { padding: 20px; color: #333; }
+.data-table { width: 100%; border-collapse: collapse; background: #fff; }
+.data-table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #eee; }
+.data-table td { padding: 15px 12px; border-bottom: 1px solid #eee; }
+
+.status { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.status.success { background: #e8f8f1; color: #2ba471; }
+.status.ongoing { background: #e8f3ff; color: #0052D9; }
+.status.waiting { background: #f0f0f0; color: #999; }
+
+.bar { background: #eee; height: 8px; border-radius: 4px; width: 100px; }
+.fill { background: #0052D9; height: 100%; border-radius: 4px; }
+
+.op-cell { background: #fafafa; text-align: center; border-left: 1px solid #eee; }
+.btn-up { display: block; width: 80%; margin: 5px auto; border: 1px solid #0052D9; color: #0052D9; background: #fff; padding: 5px; cursor: pointer; border-radius: 4px; }
+.btn-dl { background: #2ba471; color: #fff; border: none; padding: 10px; width: 80%; cursor: pointer; border-radius: 4px; }
+.divider { border-top: 1px solid #ddd; margin: 10px 0; }

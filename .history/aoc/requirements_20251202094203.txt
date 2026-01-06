@@ -1,0 +1,7 @@
+Flask
+flask-cors
+clickhouse-connect
+pandas
+numpy
+Werkzeug
+pymysql

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>北斗司雨 - 智能模型工作站</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-wrapper">
+    <!-- 左侧导航栏 -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">北斗司雨</div>
+        </div>
+        <nav class="nav-menu">
+            <div class="nav-item active" onclick="switchModule('data-mgr', this)">数据管理</div>
+            <div class="nav-item" onclick="switchModule('model-train', this)">模型训练</div>
+            <div class="nav-item" onclick="switchModule('history-task', this)">历史任务</div>
+            <div class="nav-item" onclick="switchModule('model-verify', this)">模型验证</div>
+            <div class="nav-item" onclick="switchModule('model-mgr', this)">模型管理</div>
+            <div class="nav-item" onclick="switchModule('report-export', this)">报告导出</div>
+            <div class="nav-item" onclick="switchModule('station-mgr', this)">站点管理</div>
+            <div class="nav-item" onclick="switchModule('user-mgr', this)">用户管理</div>
+        </nav>
+    </aside>
+
+    <main class="main-container">
+        <!-- 顶部全局配置栏 -->
+        <header class="top-bar">
+            <div class="global-selects">
+                <div class="select-group">
+                    <label>项目：</label>
+                    <select id="projectSelect">
+                        <option>承德项目</option>
+                        <option>武汉项目</option>
+                    </select>
+                </div>
+                <div class="select-group">
+                    <label>站点：</label>
+                    <div class="station-input-wrapper">
+                        <input list="stationList" id="stationSelect" placeholder="输入并添加站点...">
+                        <datalist id="stationList">
+                            <option value="B1 - 南方水库">
+                            <option value="B2 - 随州寨沟">
+                        </datalist>
+                        <button class="btn btn-primary" onclick="addStationTag()">添加</button>
+                    </div>
+                </div>
+                <div id="stationTags" class="tags-display"></div>
+            </div>
+            <div class="user-profile">
+                <button class="btn btn-secondary small" onclick="openModal('logs')">操作日志</button>
+                <span class="user-name">Admin</span>
+            </div>
+        </header>
+
+        <!-- 动态模块区域 -->
+        <div class="content-wrapper">
+            
+            <!-- 模块 1: 数据管理 -->
+            <section id="data-mgr" class="module-section active">
+                <div class="card">
+                    <div class="card-header"><h3>数据下载进度</h3></div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>数据类型</th>
+                                <th>时间范围</th>
+                                <th>状态</th>
+                                <th>进度</th>
+                                <th>操作整合</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PWV 数据</td>
+                                <td>2024-11-01 至 2024-11-28</td>
+                                <td><span class="status text-success">已完成</span></td>
+                                <td><div class="progress-bar"><div class="progress" style="width:100%"></div></div></td>
+                                <td rowspan="3" class="operation-cell">
+                                    <div class="vertical-btns">
+                                        <button class="btn btn-upload" onclick="openUpload('pwv')">⬆ PWV</button>
+                                        <button class="btn btn-upload" onclick="openUpload('weather')">⬆ 气象</button>
+                                        <button class="btn btn-upload" onclick="openUpload('rain')">⬆ 雨量</button>
+                                        <div class="divider"></div>
+                                        <button class="btn btn-download">⬇ 下载整合数据集</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>气象数据</td>
+                                <td>-</td>
+                                <td><span class="status text-ongoing">下载中</span></td>
+                                <td><div class="progress-bar"><div class="progress" style="width:45%"></div></div></td>
+                            </tr>
+                            <tr>
+                                <td>雨量数据</td>
+                                <td>-</td>
+                                <td><span class="status text-placeholder">未操作</span></td>
+                                <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 模块 2: 模型训练 -->
+            <section id="model-train" class="module-section">
+                <div class="card">
+                    <div class="tabs">
+                        <button class="tab-btn active" onclick="switchTab('qualitative')">定性训练</button>
+                        <button class="tab-btn" onclick="switchTab('quantitative')">定量训练</button>
+                    </div>
+                    <div class="param-grid">
+                        <div class="param-item"><label>seq_len:</label><input type="number" value="96"></div>
+                        <div class="param-item"><label>label_len:</label><input type="number" value="48"></div>
+                        <div class="param-item"><label>pred_len:</label><input type="number" value="96"></div>
+                        <div class="param-item"><label>d_model:</label><input type="number" value="512"></div>
+                        <div class="param-item"><label>n_heads:</label><input type="number" value="8"></div>
+                        <div class="param-item"><label>epochs:</label><input type="number" value="10"></div>
+                    </div>
+                    <div class="action-bar">
+                        <button class="btn btn-success large">开始训练选中站点</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 模块 3: 历史任务 -->
+            <section id="history-task" class="module-section">
+                <div class="card">
+                    <h3>历史任务记录</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>站点</th>
+                                <th>模型名称</th>
+                                <th>创建时间</th>
+                                <th>进度</th>
+                                <th>结果</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>b99</td>
+                                <td>b99_C_20251126_R</td>
+                                <td>2025-11-28</td>
+                                <td><div class="progress-bar"><div class="progress" style="width:80%"></div></div></td>
+                                <td><span class="badge badge-ongoing">进行中</span></td>
+                                <td><button class="btn small">详情</button> <button class="btn btn-danger small">删除</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 模块 4: 模型验证 -->
+            <section id="model-verify" class="module-section">
+                <div class="card">
+                    <h3>性能评估 (现模型 vs 新模型)</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>站点</th>
+                                <th>现模型评分</th>
+                                <th>新模型评分</th>
+                                <th>样本数</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>b98</td>
+                                <td>0.82 (MSE)</td>
+                                <td><select class="small-select"><option>b98_v2_new</option></select> <span class="text-primary">0.89</span></td>
+                                <td>1000</td>
+                                <td><button class="btn btn-primary small">替换模型</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 模块 5: 模型管理 -->
+            <section id="model-mgr" class="module-section">
+                <div class="card">
+                    <div class="filter-row">
+                        <select><option>定性模型</option><option>定量模型</option></select>
+                        <input type="text" placeholder="搜索模型库...">
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>模型ID</th>
+                                <th>所属站点</th>
+                                <th>部署状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>M_B1_2024</td>
+                                <td>b1</td>
+                                <td><span class="badge badge-success">运行中</span></td>
+                                <td><button class="btn small">导出</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 模块 6-8: 简化占位 (结构一致) -->
+            <section id="report-export" class="module-section">
+                <div class="card"><h3>报告导出</h3><button class="btn btn-primary">导出当前视图报告 (.PDF)</button></div>
+            </section>
+            <section id="station-mgr" class="module-section">
+                <div class="card"><h3>站点信息管理</h3></div>
+            </section>
+            <section id="user-mgr" class="module-section">
+                <div class="card"><h3>用户权限管理</h3></div>
+            </section>
+
+        </div>
+    </main>
+</div>
+
+<!-- 通用模态框 -->
+<div class="modal-bg" id="modalBg">
+    <div class="modal">
+        <div id="modalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="script.js"></script>
+</body>
+</html>

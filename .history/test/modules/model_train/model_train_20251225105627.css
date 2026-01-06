@@ -1,0 +1,8 @@
+.module-page { padding: 30px; }
+.train-card { border: 1px solid #eee; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.item label { display: block; font-size: 13px; color: #666; margin-bottom: 8px; }
+.item input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+
+.btn-start { background: #0052D9; color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-size: 15px; margin-right: 10px; }
+.btn-fine { background: #fff; border: 1px solid #0052D9; color: #0052D9; padding: 12px 30px; border-radius: 6px; cursor: pointer; }

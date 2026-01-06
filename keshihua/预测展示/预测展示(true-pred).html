@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<script src="libs/plotly-2.32.0.min.js"></script>
+<script src="libs/papaparse.min.js"></script>
+<script src="libs/flatpickr.min.js"></script>
+<link rel="stylesheet" href="libs/flatpickr.min.css" />
+
+<style>
+/*页面整体样式*/
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        /*页面标题*/
+        h1 {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(90deg, #1f77b4, #2980b9);
+            color: white;
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 1px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        h1::before {
+            content: "📈"; /* 左侧显示图标 */
+            position: absolute;
+            left: 24px;
+            top: 22px;
+            font-size: 24px;
+        }
+
+        /* 页面内容 */
+        .container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        /* 上传、选择日期、频率按钮 */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+            background: linear-gradient(to right, #ffffff, #f5faff);
+            padding: 18px 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+            border: 1px solid #dce7f3;
+        }
+
+        .controls input,
+        .controls select,
+        .controls button {
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        /* 按钮样式 */
+        .controls button {
+            background-color: #1f77b4;
+            color: white;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+        .controls button:hover {
+            background-color: #155a91;
+            transform: translateY(-2px);
+        }
+
+        /* 上传按钮 */
+        .upload-btn {
+            background-color: #1f77b4;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.3s ease;
+            border: none;
+            display: inline-block;
+        }
+        .upload-btn:hover {
+            background-color: #155a91;
+        }
+        #fileInput {
+            display: none; /*label点击*/
+        }
+
+        /* 加载提示 */
+        #loading {
+            text-align: center;
+            padding: 15px;
+            font-size: 16px;
+            color: #1f77b4;
+            display: none;
+            user-select: none;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1f77b4;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 指标展示区 */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .metric {
+            background: linear-gradient(145deg, #fdfdfd, #e8f3ff);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            animation: fadeUp 0.6s ease both;
+        }
+        .metric:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            background-color: #f0f8ff;
+        }
+        .metric b {
+            display: block;
+            font-size: 18px;
+            color: #1f77b4;
+            margin-bottom: 5px;
+        }
+
+        /* 图表容器 */
+        #chart {
+            background: linear-gradient(135deg, #ffffff, #f0f8ff);
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-top: 25px;
+            border: 1px solid #d8eafd;
+            transition: all 0.3s ease-in-out;
+        }
+        #chart:hover {
+            transform: scale(1.01);
+        }
+
+        /* 水利指标面板 */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .panel {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+        .panel-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1f77b4;
+            display: flex;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .metric-box {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #eee;
+            transition: all 0.3s;
+        }
+        .metric-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: #e9f4ff;
+        }
+        .metric-box b {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #1f77b4;
+        }
+        .metric-box span {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* 文件名展示 */
+        .file-name {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            max-width: 200px;
+            margin-left: 10px;
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border: 1px solid #ddd;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #f9f9f9;
+            font-weight: bold;
+        }
+</style>
+</head>
+<body>
+<h1>预测分析系统</h1>
+<div class="container">
+    <div class="controls">
+        <label for="fileInput" class="upload-btn">上传CSV文件夹</label>
+        <input type="file" id="fileInput" accept=".csv" multiple />
+        <span id="fileName" class="file-name">未选择文件</span>
+        <select id="freqSelect">
+            <option value="15min">15分钟</option>
+            <option value="1H">1小时</option>
+            <option value="3H">3小时</option>
+        </select>
+        <input type="text" id="startDate" placeholder="开始日期" />
+        <input type="text" id="endDate" placeholder="结束日期" />
+        <button onclick="render()">分析并绘图</button>
+        <button onclick="resetDateRange()">重置时间范围</button>
+        <button onclick="setRecentDays(7)">近7天</button>
+        <button onclick="setRecentDays(30)">近30天</button>
+    </div>
+
+    <div id="loading"><span class="loader"></span>正在加载数据，请稍候...</div>
+
+    <div class="dashboard">
+            <div class="panel">
+                <div class="panel-title"><i>💧</i>水利指标分析(小时级雨量)</div>
+                <div class="metrics-grid" id="waterMetrics">
+                    <!-- 默认填充值 -->
+                    <div class="metric-box">
+                        <b>0-5mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计样本数: 0</span>
+                    </div>
+                    <div class="metric-box">
+                        <b>5-10mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计样本数: 0</span>
+                    </div>
+                    <div class="metric-box">
+                        <b>10-20mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计样本数: 0</span>
+                    </div>
+                    <div class="metric-box">
+                        <b>>20mm</b>
+                        <span>MAE: 0<br>RMSE: 0<br>累计样本数: 0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <div class="metrics" id="metrics"></div>
+    <div id="chart" style="height:600px;"></div>
+</div>
+
+<script>
+let df15min=[];
+
+/* 日期解析 */
+function parseDate(str){
+    if(!str) return null;
+    const dateTimeParts = str.trim().split(' ');
+    const dateParts = dateTimeParts[0].includes('-') ? dateTimeParts[0].split('-') : dateTimeParts[0].split('/');
+    let h=0,m=0,s=0;
+    if(dateTimeParts[1]){
+        const timeParts = dateTimeParts[1].split(':');
+        h=parseInt(timeParts[0],10)||0;
+        m=parseInt(timeParts[1],10)||0;
+        s=parseInt(timeParts[2],10)||0;
+    }
+    return new Date(
+        parseInt(dateParts[0],10),
+        parseInt(dateParts[1],10)-1,
+        parseInt(dateParts[2],10),
+        h,m,s
+    );
+}
+
+/* 读取 CSV 文件夹：true 和 pred 文件 */
+function parseCSVFolder(files){
+    if(files.length < 2){
+        alert("请上传两个 CSV 文件：true 文件和 pred 文件");
+        return;
+    }
+    document.getElementById('loading').style.display='block';
+    let trueFile=null, predFile=null;
+    Array.from(files).forEach(f=>{
+        if(f.name.includes("true")) trueFile=f;
+        if(f.name.includes("pred")) predFile=f;
+    });
+    if(!trueFile || !predFile){
+        alert("文件命名必须包含 'true' 和 'pred'");
+        document.getElementById('loading').style.display='none';
+        return;
+    }
+
+    Promise.all([
+        new Promise(res=>{Papa.parse(trueFile,{header:true,skipEmptyLines:true,complete:(r)=>res(r.data)});}),
+        new Promise(res=>{Papa.parse(predFile,{header:true,skipEmptyLines:true,complete:(r)=>res(r.data)});})
+    ]).then(([trueData,predData])=>{
+        df15min=[];
+        const len = Math.min(trueData.length,predData.length);
+        for(let i=0;i<len;i++){
+            const tRow=trueData[i], pRow=predData[i];
+            const date = parseDate(tRow.date);
+            if(date){
+                // 提取 true_1~true_12 和 pred_1~pred_12 数组
+                const trueVals=[], predVals=[];
+                for(let k=1;k<=12;k++){
+                    trueVals.push(parseFloat(tRow['true_'+k]||0));
+                    predVals.push(parseFloat(pRow['pred_'+k]||0));
+                }
+                df15min.push({date: date, trueVals:trueVals, predVals:predVals});
+            }
+        }
+        df15min.sort((a,b)=>a.date-b.date);
+        resetDateRange();
+        document.getElementById('loading').style.display='none';
+    });
+}
+
+/* 根据频率累加 */
+function aggregateRow(row, freq){
+    let n=1;
+    if(freq==='1H') n=4;
+    else if(freq==='3H') n=12;
+    const trueSum = row.trueVals.slice(0,n).reduce((a,b)=>a+b,0);
+    const predSum = row.predVals.slice(0,n).reduce((a,b)=>a+b,0);
+    return {date: row.date, true:trueSum, pred:predSum};
+}
+
+/* 渲染图表 */
+function render(){
+    if(df15min.length===0){ alert("请先上传 CSV 文件"); return; }
+    const freq=document.getElementById('freqSelect').value;
+    const start=parseDate(document.getElementById('startDate').value);
+    const end=parseDate(document.getElementById('endDate').value);
+    if(!start||!end){alert("请选择有效日期范围");return;}
+
+    let data=df15min.filter(d=>d.date>=start && d.date<=end).map(d=>aggregateRow(d,freq));
+    if(data.length===0){alert("所选时间范围内没有数据");return;}
+
+    const metrics=computeMetrics(data);
+    const waterMetrics=computeWaterMetrics(data);
+    updateWaterMetricsPanel(waterMetrics);
+
+    const fmt=x=>isNaN(x)?'N/A':x.toFixed(3);
+    document.getElementById('metrics').innerHTML=`
+        <div class="metric"><b>RMSE</b>${fmt(metrics.rmse)}</div>
+        <div class="metric"><b>R²</b>${fmt(metrics.r2)}</div>
+        <div class="metric"><b>TS</b>${fmt(metrics.ts)}</div>
+        <div class="metric"><b>POD</b>${fmt(metrics.pod)}</div>
+        <div class="metric"><b>FAR</b>${fmt(metrics.far)}</div>
+    `;
+
+    const labels=data.map(d=>d.date.toLocaleString());
+    const trueVals=data.map(d=>d.true);
+    const predVals=data.map(d=>d.pred);
+
+    Plotly.newPlot('chart',[
+        {x:labels,y:trueVals,name:'真实值',type:'bar',marker:{color:'#1f77b4'}},
+        {x:labels,y:predVals,name:'预测值',type:'bar',marker:{color:'#ff7f0e'}}
+    ],{
+        barmode:'group',
+        title:`降水预测分析 (${freq==='15min'?'15分钟':freq==='1H'?'1小时':'3小时'}数据)`,
+        xaxis:{title:'时间',tickangle:-45,nticks:6,automargin:true},
+        yaxis:{title:'降水量 (mm)'},
+        hovermode:'x unified',
+        margin:{l:60,r:30,t:60,b:100},
+        height:500
+    });
+}
+
+/* 日期选择器 */
+flatpickr('#startDate',{dateFormat:'Y-m-d',enableTime:false});
+flatpickr('#endDate',{dateFormat:'Y-m-d',enableTime:false});
+
+/* 文件上传 */
+document.getElementById('fileInput').addEventListener('change',(e)=>{
+    const files=e.target.files;
+    const fileNameSpan=document.getElementById('fileName');
+    if(files.length>0){
+        parseCSVFolder(files);
+        fileNameSpan.textContent=Array.from(files).map(f=>f.name).join(', ');
+        fileNameSpan.title=fileNameSpan.textContent;
+    } else {
+        fileNameSpan.textContent="未选择文件";
+        fileNameSpan.title="";
+    }
+});
+
+/* 重置时间范围 */
+function resetDateRange(){
+    if(df15min.length===0) return;
+    const start=df15min[0].date;
+    const end=df15min[df15min.length-1].date;
+    document.getElementById('startDate')._flatpickr.setDate(start);
+    document.getElementById('endDate')._flatpickr.setDate(end);
+    render();
+}
+
+/* 近几天 */
+function setRecentDays(days){
+    if(df15min.length===0) return;
+    const end=df15min[df15min.length-1].date;
+    const start=new Date(end);
+    start.setDate(end.getDate()-days+1);
+    document.getElementById('startDate')._flatpickr.setDate(start);
+    document.getElementById('endDate')._flatpickr.setDate(end);
+    render();
+}
+
+function computeMetrics(data){
+    if(data.length===0) return {};
+    let mse=0, mae=0, tp=0, fp=0, fn=0, tn=0;
+    const y=data.map(d=>d.true);
+    const yhat=data.map(d=>d.pred);
+    const meanY=y.reduce((a,b)=>a+b)/y.length;
+    let ssRes=0, ssTot=0;
+    for(let i=0;i<data.length;i++){
+        const t=y[i], p=yhat[i], error=t-p;
+        mse+=error*error;
+        mae+=Math.abs(error);
+        ssRes+=error*error;
+        ssTot+=(t-meanY)**2;
+        const tEvent=t>0.1;
+        const pEvent=p>0.1;
+        if(tEvent&&pEvent) tp++;
+        if(!tEvent&&pEvent) fp++;
+        if(tEvent&&!pEvent) fn++;
+        if(!tEvent&&!pEvent) tn++;
+    }
+    const n=data.length;
+    const rmse=Math.sqrt(mse/n);
+    const maeVal=mae/n;
+    const r2=1-ssRes/ssTot;
+    const pod=(tp+fn)>0?tp/(tp+fn):0;
+    const far=(tp+fp)>0?fp/(tp+fp):0;
+    const ts=(tp+fn+fp)>0?tp/(tp+fn+fp):0;
+    return {rmse, mae:maeVal, r2, pod, far, ts};
+}
+
+/* 计算水利分区的 MAE / RMSE / 累计小时数（右端点包含） */
+// function computeWaterMetrics(data){
+//     const ranges=[
+//         {min:0,    max:5,    name:'0-5mm'},
+//         {min:5,    max:10,   name:'5-10mm'},
+//         {min:10,   max:20,   name:'10-20mm'},
+//         {min:20,   max:Infinity, name:'>20mm'} 
+//     ];
+//     const results = [];
+
+//     for(const r of ranges){
+//         const filtered = data.filter(d => {
+//             if(r.max === Infinity) return d.true >= r.min; // 最后一个区间包含所有大于等于20的
+//             return d.true >= r.min && d.true <= r.max;
+//         });
+
+//         const count = filtered.length;
+//         if(count === 0){
+//             results.push({name:r.name, count:0, mae: null, rmse: null});
+//             continue;
+//         }
+
+//         let sumAbs=0, sumSq=0;
+//         for(const item of filtered){
+//             const err = item.true - item.pred;
+//             sumAbs += Math.abs(err);
+//             sumSq += err*err;
+//         }
+//         const mae = sumAbs / count;
+//         const rmse = Math.sqrt(sumSq / count);
+
+//         results.push({name:r.name, count, mae, rmse});
+//     }
+//     return results;
+// }
+function computeWaterMetrics(data){
+    const ranges=[
+        {min:0,    max:5,    name:'0-5mm',  includeMin:true, includeMax:true},
+        {min:5,    max:10,   name:'5-10mm', includeMax:true},
+        {min:10,   max:20,   name:'10-20mm',includeMax:true},
+        {min:20,   max:Infinity, name:'>20mm', includeMax:false}
+    ];
+    const results = [];
+
+    for(const r of ranges){
+        const filtered = data.filter(d => {
+            if(r.includeMin && r.includeMax) return d.true >= r.min && d.true <= r.max;
+            if(r.includeMax) return d.true > r.min && d.true <= r.max;
+            return d.true > r.min && d.true < r.max;
+        });
+
+        const count = filtered.length;
+        if(count === 0){
+            results.push({name:r.name, count:0, mae: null, rmse: null});
+            continue;
+        }
+
+        let sumAbs=0, sumSq=0;
+        for(const item of filtered){
+            const err = item.true - item.pred;
+            sumAbs += Math.abs(err);
+            sumSq += err*err;
+        }
+        const mae = sumAbs / count;
+        const rmse = Math.sqrt(sumSq / count);
+
+        results.push({name:r.name, count, mae, rmse});
+    }
+    return results;
+}
+
+
+/* 更新水利面板显示 */
+function updateWaterMetricsPanel(metrics){
+    const div = document.getElementById('waterMetrics');
+    div.innerHTML = '';
+    metrics.forEach(m => {
+        const maeText = (m.mae === null || isNaN(m.mae)) ? '-' : m.mae.toFixed(2);
+        const rmseText = (m.rmse === null || isNaN(m.rmse)) ? '-' : m.rmse.toFixed(2);
+        const item = document.createElement('div');
+        item.className = 'metric-box';
+        item.innerHTML = `<b>${m.name}</b>
+                          <span>MAE: ${maeText}<br>
+                                RMSE: ${rmseText}<br>
+                                累计样本数: ${m.count}</span>`;
+        div.appendChild(item);
+    });
+}
+
+</script>
+</body>
+</html>

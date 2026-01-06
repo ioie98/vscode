@@ -1,0 +1,11 @@
+SQL文件开源的，在QQ群，开源不易，
+
+请在gitee或github左上角star后备注gitee的用户名加**QQ群（667859660）**获取
+
+或者扫码进群
+
+群1： 640700429 （2000人已满）
+
+群2： 667859660 （新群）
+
+![](https://gitee.com/virus010101/linfeng-community/raw/master/images/qrcode.jpg)

@@ -1,0 +1,331 @@
+/* ---------- 页面整体样式 ---------- */
+html {
+    font-size: 14px; /* 基准字号，缩放时按钮/文字自动跟随 */
+}
+body {
+    font-family: "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 1.43rem; /* 20px -> 1.43rem */
+    color: #333;
+}
+
+/* ---------- 顶部选择 ---------- */
+.top-selects {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.43rem; /* 20px -> 1.43rem */
+    margin-bottom: 1.43rem;
+}
+
+.top-selects label {
+    font-weight: 600;
+    font-size: 1rem; /* 14px -> 1rem */
+}
+
+.top-selects select,
+.top-selects input {
+    padding: 0.43rem 0.86rem; /* 6px 12px -> rem */
+    border: 1px solid #ccc;
+    border-radius: 0.43rem;   /* 6px -> rem */
+    outline: none;
+    font-size: 1rem;
+}
+
+/* ---------- 区块样式 ---------- */
+.section {
+    background: #fff;
+    border-radius: 0.57rem; /* 8px -> rem */
+    padding: 1.43rem;
+    margin-bottom: 1.43rem;
+    box-shadow: 0 0.29rem 0.86rem rgba(0,0,0,0.08); /* 4px 12px -> rem */
+}
+
+.section h3 {
+    border-left: 0.36rem solid #007bff; /* 5px -> rem */
+    padding-left: 0.71rem; /* 10px -> rem */
+    font-size: 1.29rem; /* 18px -> rem */
+    margin-bottom: 0.86rem; /* 15px -> rem */
+    color: #007bff;
+}
+
+/* ---------- 表格 ---------- */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.71rem;
+    table-layout: fixed;
+}
+
+th, td {
+    border: 1px solid #e0e0e0;
+    padding: 0.71rem; /* 10px -> rem */
+    text-align: center;
+    font-size: 0.93rem; /* 13px -> rem */
+    word-wrap: break-word;
+}
+
+th {
+    background: linear-gradient(90deg, #f7f7f7, #e9f1ff);
+    font-weight: 600;
+}
+
+tbody tr:hover {
+    background: #f1f5fb;
+}
+
+/* ---------- 进度条 ---------- */
+.progress-bar {
+    height: 0.71rem;
+    background: #e0e0e0;
+    border-radius: 0.43rem;
+    overflow: hidden;
+    margin-bottom: 0.29rem;
+}
+
+.progress {
+    height: 100%;
+    transition: width 0.4s ease;
+    border-radius: 0.43rem;
+}
+
+.progress.blue {
+    background: #2196f3;
+}
+
+.progress.green {
+    background: #2196f3;
+}
+
+/* ---------- 按钮 ---------- */
+.btn {
+    background: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 0.43rem;
+    padding: 0.43rem 0.86rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    background: #0056b3;
+}
+
+.btn.red {
+    background: #dc3545;
+}
+
+.btn.red:hover {
+    background: #b71c1c;
+}
+
+/* 小型按钮（用于优先级上下） */
+.btn.small {
+    padding: 0.29rem 0.57rem;
+    font-size: 0.86rem;
+}
+
+/* ---------- 弹框 ---------- */
+.modal-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.3);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #fff;
+    padding: 1.43rem;
+    border-radius: 0.57rem;
+    max-width: 42.86rem; /* 600px -> rem */
+    width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+    box-shadow: 0 0.29rem 0.86rem rgba(0,0,0,0.2);
+    animation: popup 0.25s ease-out;
+}
+
+@keyframes popup {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- 文件拖拽区域 ---------- */
+.drag-area {
+    border: 0.14rem dashed #007bff;
+    border-radius: 0.43rem;
+    padding: 2.14rem;
+    text-align: center;
+    margin-bottom: 0.71rem;
+    cursor: pointer;
+}
+
+.drag-area.dragover {
+    background: #e0f0ff;
+}
+
+/* ---------- 分页 ---------- */
+.pagination {
+    text-align: right;
+    margin-top: 0.71rem;
+}
+
+.pagination button {
+    margin-left: 0.36rem;
+    padding: 0.29rem 0.71rem;
+    border: none;
+    background: #f0f0f0;
+    cursor: pointer;
+    border-radius: 0.43rem;
+    transition: all 0.3s;
+}
+
+.pagination button:hover,
+.pagination button.active {
+    background: #007bff;
+    color: #fff;
+}
+
+/* ---------- Toast 提示 ---------- */
+.toast-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #4caf50;
+    color: #fff;
+    padding: 1.14rem 2.14rem;
+    border-radius: 0.57rem;
+    font-size: 1.14rem;
+    box-shadow: 0 0.29rem 0.71rem rgba(0,0,0,0.3);
+    z-index: 2000;
+    opacity: 0;
+    transition: opacity 0.5s;
+}
+
+/* ---------- 操作列 ---------- */
+.operation-container {
+    display: flex;
+    align-items: center;
+    gap: 0.86rem;
+}
+
+/* 上传按钮列 */
+.upload-column {
+    display: flex;
+    flex-direction: column;
+    gap: 0.57rem;
+    padding-right: 0.71rem;
+    border-right: 1px solid #ccc;
+}
+
+/* 上传按钮大小统一（rem 适应缩放） */
+.upload-column .upload-btn {
+    min-width: 8rem;  /* 原120px */
+    padding: 0.43rem 0.86rem;
+    font-size: 1rem;
+}
+
+/* 下载按钮列 */
+.download-column {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding-left: 0.71rem;
+}
+
+/* 下载按钮大小统一（rem 适应缩放） */
+.download-column .download-btn {
+    padding: 0.43rem 0.86rem;
+    min-width: 5rem;  /* 原80px */
+    width: auto;
+    font-size: 1rem;
+}
+
+/* ---------- 站点标签样式 ---------- */
+.station-tag {
+    background: #007bff;
+    color: #fff;
+    padding: 0.29rem 0.71rem;
+    border-radius: 0.86rem;
+    font-size: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.57rem;
+    margin-right: 0.43rem;
+    margin-bottom: 0.43rem;
+}
+
+.station-tag .remove-tag {
+    cursor: pointer;
+    font-weight: bold;
+    padding-left: 0.29rem;
+}
+
+/* 下载模式选择按钮 */
+.download-mode {
+    display: flex;
+    gap: 0.71rem;
+    margin: 0.71rem 0 1.71rem 0;
+    align-items: center;
+}
+
+.download-mode label {
+    font-weight: 600;
+}
+
+.download-mode input {
+    margin-right: 0.29rem;
+}
+
+/* 下载区域外层 */
+.download-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.86rem;
+    align-items: center;
+}
+
+/* 消息提示文字 */
+.message-box {
+    margin-right: 0.71rem;
+    color: #f00;
+}
+
+/* ---------- 站点输入行 ---------- */
+.station-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0.57rem;
+}
+
+/* 外层容器：上下一点间距 */
+.station-tag-wrapper {
+    margin: 0.57rem 0;
+}
+
+/* 标签容器：横向排列 + 自动换行 */
+.station-tags-container {
+    display: flex;
+    gap: 0.57rem;
+    flex-wrap: wrap;
+}
+
+/* ---------- 响应式 ---------- */
+@media screen and (max-width: 768px) {
+    .top-selects {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .modal { width: 95%; }
+}

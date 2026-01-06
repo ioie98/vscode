@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>数据准备与整合</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- 顶部选择 -->
+<div class="top-selects">
+    <label>项目：</label>
+    <select id="projectSelect">
+        <option>项目A</option>
+        <option>项目B</option>
+        <option>项目C</option>
+    </select>
+
+    <label>站点：</label>
+
+    <!-- 原始输入（datalist）保留，同时增加 "添加到队列" 按钮 和 标签展示区 -->
+    <div style="display:flex; align-items:center; gap:8px;">
+        <input list="stationList" id="stationSelect" placeholder="输入或选择站点..." onkeydown="onStationInputKeydown(event)">
+        <datalist id="stationList">
+            <option value="b72"></option>
+            <option value="b99"></option>
+            <option value="b100"></option>
+        </datalist>
+        <button class="btn" onclick="addStationFromInput()">添加到列表</button>
+        <button class="btn" onclick="clearStationList()">清空列表</button>
+    </div>
+</div>
+
+<!-- 显示已添加的多个站点标签 -->
+<div style="margin:8px 0;">
+    <div id="stationTags" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+</div>
+
+<!-- 数据准备 -->
+<div class="section">
+    <h3>数据准备</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>数据类型</th>
+                <th>时间范围</th>
+                <th>上传/下载状态</th>
+                <th>进度</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>PWV 数据</td>
+                <td id="pwvTimeRange">2025/10/01 00:00 - 2025/10/21 12:00</td>
+                <td id="pwvStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress blue" style="width:0%"></div></div></td>
+                <!-- 操作列 -->
+                <td rowspan="3">
+                <div class="operation-container">
+                    <!-- 左侧上传按钮列 -->
+                    <div class="upload-column">
+                        <button class="btn upload-btn" onclick="openUploadModal('pwv')">上传 PWV</button>
+                        <button class="btn upload-btn" onclick="openUploadModal('weather')">上传 气象</button>
+                        <button class="btn upload-btn" onclick="openUploadModal('rain')">上传 雨量</button>
+                    </div>
+                    <!-- 右侧下载按钮 -->
+                    <div class="download-column">
+                        <button class="btn download-btn" onclick="openUnifiedDownloadModal()">下载数据</button>
+                    </div>
+                </div>
+            </td>
+            </tr>
+            <tr>
+                <td>气象数据</td>
+                <td id="weatherTimeRange">2025/10/01 00:00 - 2025/10/21 12:00</td>
+                <td id="weatherStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress blue" style="width:0%"></div></div></td>
+            </tr>
+            <tr>
+                <td>雨量数据</td>
+                <td id="rainTimeRange">2025/10/01 00:00 - 2025/10/21 12:00</td>
+                <td id="rainStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress blue" style="width:0%"></div></div></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 注意：已移除独立“数据整合”按钮：下载按钮将负责整合 -->
+    <div style="display:flex; justify-content:flex-end; margin-top:12px; align-items:center;">
+        <div id="messageBox" style="margin-right:10px; color:#f00;"></div>
+    </div>
+</div>
+
+<!-- 数据整合结果 -->
+<div class="section">
+    <h3>数据整合结果</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>数据集名称</th>
+                <th>站点编号</th>
+                <th>站点名称</th>
+                <th>时间范围</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="datasetTableBody"></tbody>
+    </table>
+    <div class="dataset-footer">
+        <div id="datasetCount"></div>
+        <div class="pagination" id="datasetPagination"></div>
+    </div>
+</div>
+
+<!-- 弹框 -->
+<div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalContent">
+        <div id="modalBody">
+            <p>请选择保存类型：</p>
+            <div style="display:flex; gap:12px; margin-top:10px;">
+                <button class="download-type-btn" onclick="setSaveType('Train')">Train</button>
+                <button class="download-type-btn" onclick="setSaveType('Pred')">Pred</button>
+            </div>
+        </div>
+        <div style="text-align:right; margin-top:15px;">
+            <button class="btn" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='libs/plotly-2.32.0.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/papaparse.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/flatpickr.min.js') }}"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

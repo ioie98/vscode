@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>数据准备控制台</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- 居中和最大宽度限制 -->
+<div class="container">
+
+    <!-- 顶部操作区 -->
+    <div class="top-selects">
+        <label>项目：</label>
+        <select id="projectSelect"></select>
+
+        <label>站点：</label>
+        <div class="station-input-row">
+            <input list="stationList" id="stationSelect" placeholder="输入或选择站点..." onkeydown="onStationInputKeydown(event)">
+            <datalist id="stationList"></datalist>
+            <button class="btn" onclick="addStationFromInput()">添加站点</button>
+            <button class="btn delete-btn" onclick="clearStationList()" style="border:1px solid #fecaca;">清空列表</button>
+        </div>
+    </div>
+
+    <!-- 站点标签展示区 -->
+    <div class="station-tag-wrapper">
+        <div id="stationTags" class="station-tags-container"></div>
+    </div>
+
+    <!-- 任务看板 -->
+    <div class="section">
+        <h3>数据准备任务</h3>
+        <table>
+            <thead>
+                <tr>
+                    <!--稍微缩窄数据类型 -->
+                    <th style="width: 12%;">数据类型</th>
+                    <th style="width: 25%;">时间范围</th>
+                    <th style="width: 10%;">状态</th>
+                    <th style="width: 15%;">进度</th>
+                    <th style="width: 38%;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>PWV 数据</strong></td>
+                    <td id="pwvTimeRange">-</td>
+                    <td id="pwvStatus"><span style="color:#9ca3af">未操作</span></td>
+                    <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+                    <!-- 操作列合并 -->
+                    <td rowspan="3" style="vertical-align: middle; background-color: #f9fafb;">
+                        <div class="operation-container" style="justify-content: center;">
+                            <div class="upload-column" style="border-right:none;">
+                                <button class="btn upload-btn" onclick="openUploadModal('pwv')">⬆ PWV</button>
+                                <button class="btn upload-btn" onclick="openUploadModal('weather')">⬆ 气象</button>
+                                <button class="btn upload-btn" onclick="openUploadModal('rain')">⬆ 雨量</button>
+                            </div>
+                            <div class="download-column" style="margin-left:10px; padding-left:10px; border-left:1px solid #e5e7eb;">
+                                <button class="btn download-btn" onclick="openUnifiedDownloadModal()">⬇ 下载整合</button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>气象数据</strong></td>
+                    <td id="weatherTimeRange">-</td>
+                    <td id="weatherStatus"><span style="color:#9ca3af">未操作</span></td>
+                    <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+                </tr>
+                <tr>
+                    <td><strong>雨量数据</strong></td>
+                    <td id="rainTimeRange">-</td>
+                    <td id="rainStatus"><span style="color:#9ca3af">未操作</span></td>
+                    <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 数据列表 -->
+    <div class="section">
+        <h3>数据结果</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35%; text-align: left; padding-left: 24px;">数据集名称</th>
+                    <th style="width: 10%;">站点编号</th>
+                    <th style="width: 15%;">站点名称</th>
+                    <th style="width: 20%;">时间范围</th>
+                    <th style="width: 15%;">创建时间</th>
+
+                    <!-- 操作列固定宽度 -->
+                    <th style="width: 220px;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="datasetTableBody"></tbody>
+        </table>
+        
+        <!-- 页脚部分保持不变 -->
+        <div class="dataset-footer" style="display: flex; justify-content: space-between; margin-top: 20px; align-items: center;">
+            <div id="datasetCount" style="color:var(--text-secondary); font-size:14px;"></div>
+            <div class="pagination" id="datasetPagination"></div>
+        </div>
+    </div>
+
+</div> <!-- 容器结束 -->
+
+<!-- 通用弹框 -->
+<div class="modal-bg" id="modalBg">
+    <div class="modal">
+        <div id="modalBody"></div>
+        <div id="modalFooter" style="text-align:right; margin-top:20px; padding-top:15px; border-top:1px solid #f3f4f6;">
+            <button class="btn" style="background:#f3f4f6; color:#374151; border:1px solid #e5e7eb;" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='libs/flatpickr.min.js') }}"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

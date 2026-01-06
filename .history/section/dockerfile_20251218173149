@@ -1,0 +1,27 @@
+# 1. 使用官方 Airflow 镜像作为基础 (根据你的 Airflow 版本修改，推荐使用具体版本号)
+FROM apache/airflow:2.7.1-python3.10
+
+# 2. 切换到 root 用户以安装系统级依赖 (如果需要)
+# USER root
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     vim \
+#  && apt-get autoremove -yqq --purge \
+#  && apt-get clean \
+#  && rm -rf /var/lib/apt/lists/*
+
+# 3. 切换回 airflow 用户进行后续操作
+USER airflow
+
+# 4. 复制 requirements.txt 到镜像中
+COPY requirements.txt /requirements.txt
+
+# 5. 安装 Python 依赖
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# 6. 将你的 DAG 文件和静态资源复制到镜像的 DAGs 目录
+# 官方镜像的 DAG 目录通常是 /opt/airflow/dags
+COPY --chown=airflow:root dags/ /opt/airflow/dags/
+
+# 注意：
+# tmp 目录不需要复制，代码会自动创建。
+# 但为了确保权限问题，可以预先声明数据卷或目录（可选）

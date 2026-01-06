@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>数据准备</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- 顶部操作区 -->
+<div class="top-selects">
+    <label>项目：</label>
+    <select id="projectSelect"></select>
+
+    <label>站点：</label>
+    <div class="station-input-row">
+        <input list="stationList" id="stationSelect" placeholder="输入或选择站点..." onkeydown="onStationInputKeydown(event)">
+        <datalist id="stationList"></datalist>
+        <button class="btn" onclick="addStationFromInput()">添加到列表</button>
+        <button class="btn" onclick="clearStationList()">清空列表</button>
+    </div>
+</div>
+
+<div class="station-tag-wrapper">
+    <div id="stationTags" class="station-tags-container"></div>
+</div>
+
+<!-- 任务看板 -->
+<div class="section">
+    <h3>数据准备</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>数据类型</th>
+                <th>时间范围</th>
+                <th>上传/下载状态</th>
+                <th>进度</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>PWV 数据</td>
+                <td id="pwvTimeRange">-</td>
+                <td id="pwvStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+                <td rowspan="3">
+                    <div class="operation-container">
+                        <div class="upload-column">
+                            <button class="btn upload-btn" onclick="openUploadModal('pwv')">上传 PWV</button>
+                            <button class="btn upload-btn" onclick="openUploadModal('weather')">上传 气象</button>
+                            <button class="btn upload-btn" onclick="openUploadModal('rain')">上传 雨量</button>
+                        </div>
+                        <div class="download-column">
+                            <button class="btn download-btn" onclick="openUnifiedDownloadModal()">下载数据</button>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>气象数据</td>
+                <td id="weatherTimeRange">-</td>
+                <td id="weatherStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+            </tr>
+            <tr>
+                <td>雨量数据</td>
+                <td id="rainTimeRange">-</td>
+                <td id="rainStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 数据列表 -->
+<div class="section">
+    <h3>数据详情</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>数据集名称</th>
+                <th>站点编号</th>
+                <th>站点名称</th>
+                <th>时间范围</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="datasetTableBody"></tbody>
+    </table>
+    <div class="dataset-footer" style="display: flex; justify-content: space-between; margin-top: 10px;">
+        <div id="datasetCount"></div>
+        <div class="pagination" id="datasetPagination"></div>
+    </div>
+</div>
+
+<!-- 通用弹框 -->
+<!-- 弹框结构 -->
+<div class="modal-bg" id="modalBg">
+    <div class="modal">
+        <!-- 内容区域 -->
+        <div id="modalBody"></div>
+        
+        <!-- 底部区域：必须添加 id="modalFooter" -->
+        <div id="modalFooter" style="text-align:right; margin-top:10px;">
+            <button class="btn" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='libs/plotly-2.32.0.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/papaparse.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/flatpickr.min.js') }}"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

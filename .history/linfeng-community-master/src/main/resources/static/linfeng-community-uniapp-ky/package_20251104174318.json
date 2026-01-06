@@ -1,0 +1,19 @@
+{
+  "name": "linfeng-community-uniapp-ky",
+  "version": "1.0.0",
+  "description": "林风社交论坛开源版",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "uview-ui": "^1.8.4"
+  },
+  "devDependencies": {
+    "@dcloudio/vue-cli-plugin-uni": "^2.0.2-4080420251103001",
+    "@vue/cli-service": "^5.0.9"
+  }
+}

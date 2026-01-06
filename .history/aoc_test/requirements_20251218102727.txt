@@ -1,0 +1,9 @@
+Flask
+Flask-Cors
+clickhouse-connect
+pandas
+numpy
+PyMySQL
+requests
+tos
+gunicorn

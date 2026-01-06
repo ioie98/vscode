@@ -1,0 +1,7 @@
+.history-table { width: 100%; border-collapse: collapse; }
+.history-table th { text-align: left; padding: 12px; background: #f8f9fa; color: #666; }
+.history-table td { padding: 15px 12px; border-bottom: 1px solid #eee; }
+.prog-bg { background: #eee; height: 6px; border-radius: 3px; width: 100px; }
+.prog-fill { background: var(--primary); height: 100%; border-radius: 3px; }
+.tag.ongoing { color: var(--primary); background: #e8f3ff; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.btn-link { color: var(--primary); background: none; border: none; cursor: pointer; }

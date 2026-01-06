@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>北斗司雨 - 数据准备控制台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- 侧边栏导航 -->
+<div class="sidebar">
+    <div class="sidebar-logo">北斗司雨平台</div>
+    <ul class="nav-menu">
+        <li class="nav-item active" onclick="showSection('data-management', this)">数据管理</li>
+        <li class="nav-item" onclick="showSection('model-training', this)">模型训练</li>
+        <li class="nav-item" onclick="showSection('history-tasks', this)">历史任务</li>
+        <li class="nav-item" onclick="showSection('model-validation', this)">模型验证</li>
+        <li class="nav-item" onclick="showSection('model-management', this)">模型管理</li>
+        <li class="nav-item" onclick="showSection('report-export', this)">报告导出</li>
+        <li class="nav-item" onclick="showSection('station-management', this)">站点管理</li>
+        <li class="nav-item" onclick="showSection('user-management', this)">用户管理</li>
+    </ul>
+</div>
+
+<div class="main-content">
+    <!-- 顶部通用操作区 (项目/站点选择) -->
+    <div class="top-header">
+        <div class="top-selects">
+            <label>项目：</label>
+            <select id="projectSelect">
+                <option>承德项目</option>
+                <option>武汉项目</option>
+            </select>
+            <label>站点：</label>
+            <div class="station-input-row">
+                <input list="stationList" id="stationSelect" placeholder="选择站点...">
+                <datalist id="stationList"></datalist>
+                <button class="btn" onclick="addStationFromInput()">添加</button>
+            </div>
+            <div id="stationTags" class="station-tags-container"></div>
+        </div>
+        <div class="user-info">
+            <span>管理员: admin</span>
+            <button class="btn btn-secondary small" onclick="openModal('logs')">操作日志</button>
+        </div>
+    </div>
+
+    <!-- 1. 数据管理模块 (原内容) -->
+    <div id="data-management" class="content-section active">
+        <div class="section">
+            <h3>数据下载</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="th-task-type">数据类型</th>
+                        <th class="th-task-time">时间范围</th>
+                        <th class="th-task-status">状态</th>
+                        <th class="th-task-progress">进度</th>
+                        <th class="th-task-action">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>PWV 数据</strong></td>
+                        <td id="pwvTimeRange">-</td>
+                        <td id="pwvStatus"><span class="text-status-placeholder">未操作</span></td>
+                        <td><div class="progress-bar"><div class="progress" style="width:0%"></div></div></td>
+                        <td rowspan="3" class="cell-operation-merged">
+                            <div class="operation-container">
+                                <div class="upload-column">
+                                    <button class="btn upload-btn" onclick="openUploadModal('pwv')">⬆ PWV</button>
+                                    <button class="btn upload-btn" onclick="openUploadModal('weather')">⬆ 气象</button>
+                                    <button class="btn upload-btn" onclick="openUploadModal('rain')">⬆ 雨量</button>
+                                </div>
+                                <div class="download-column">
+                                    <button class="btn download-btn">⬇ 下载整合</button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>气象数据</strong></td>
+                        <td id="weatherTimeRange">-</td>
+                        <td id="weatherStatus">进行中</td>
+                        <td><div class="progress-bar"><div class="progress" style="width:45%"></div></div></td>
+                    </tr>
+                    <tr>
+                        <td><strong>雨量数据</strong></td>
+                        <td id="rainTimeRange">-</td>
+                        <td id="rainStatus">已完成</td>
+                        <td><div class="progress-bar"><div class="progress" style="width:100%"></div></div></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. 模型训练模块 -->
+    <div id="model-training" class="content-section">
+        <div class="section">
+            <div class="tab-header">
+                <button class="tab-btn active">定性训练</button>
+                <button class="tab-btn">定量训练</button>
+            </div>
+            <h3>训练列表</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:50px">选择</th>
+                        <th>站点编号</th>
+                        <th>站点名称</th>
+                        <th>项目</th>
+                        <th>关联数据集</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="checkbox"></td>
+                        <td>b1</td>
+                        <td>南方水库</td>
+                        <td>承德项目</td>
+                        <td>
+                            <select class="small-select">
+                                <option>b1-241113~241201-device</option>
+                            </select>
+                        </td>
+                        <td><button class="btn small">参数微调</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="action-footer">
+                <button class="btn upload-btn">开始训练</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 历史任务模块 -->
+    <div id="history-tasks" class="content-section">
+        <div class="section">
+            <h3>任务记录</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>站点编号</th>
+                        <th>数据集</th>
+                        <th>模型名称</th>
+                        <th>进度</th>
+                        <th>结果</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>b99</td>
+                        <td>b99-241113~241201</td>
+                        <td>b99_C_20251126_R</td>
+                        <td><div class="progress-bar"><div class="progress" style="width:80%"></div></div></td>
+                        <td><span class="status-tag ongoing">进行中</span></td>
+                        <td>
+                            <button class="btn small btn-secondary" onclick="openTaskDetail()">详情</button>
+                            <button class="btn small btn-outline-red">删除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. 模型管理模块 -->
+    <div id="model-management" class="content-section">
+        <div class="section">
+            <div class="filter-bar">
+                <label>类别：</label>
+                <select><option>定性模型</option><option>定量模型</option></select>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>模型库名称</th>
+                        <th>模型评分</th>
+                        <th>数据集</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>b1XXX_v1</td>
+                        <td>90 / 100</td>
+                        <td>b1-20241113</td>
+                        <td><span class="status-tag success">当前部署</span></td>
+                        <td>
+                            <button class="btn small">重新部署</button>
+                            <button class="btn small btn-outline-red">删除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 5. 报告导出 -->
+    <div id="report-export" class="content-section">
+        <div class="section">
+            <div class="tab-header">
+                <button class="tab-btn active">总体报告</button>
+                <button class="tab-btn">站点报告</button>
+            </div>
+            <div class="report-config" style="padding: 20px;">
+                <p>选择评估方式： 
+                    <input type="radio" name="ev" checked> 定性
+                    <input type="radio" name="ev"> 定量
+                </p>
+                <button class="btn download-btn">生成并导出报告 (.pdf)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. 站点管理 -->
+    <div id="station-management" class="content-section">
+        <div class="section">
+            <div class="action-header">
+                <button class="btn upload-btn">+ 新增站点</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>站点编号</th>
+                        <th>站点名称</th>
+                        <th>类型</th>
+                        <th>区域</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>b1</td>
+                        <td>随州寨沟水库</td>
+                        <td>现网站点</td>
+                        <td>武汉</td>
+                        <td><button class="btn small btn-secondary" disabled>编辑</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- 通用弹框 -->
+<div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalWindow">
+        <div id="modalBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='libs/flatpickr.min.js') }}"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

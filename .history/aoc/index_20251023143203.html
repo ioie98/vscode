@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>数据准备与整合</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='libs/flatpickr.min.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- 顶部选择 -->
+<div class="top-selects">
+    <label>项目：</label>
+    <select id="projectSelect">
+        <option>项目A</option>
+        <option>项目B</option>
+        <option>项目C</option>
+    </select>
+    <label>站点：</label>
+    <input list="stationList" id="stationSelect" placeholder="输入或选择站点..." onchange="loadSiteDatasets()">
+    <datalist id="stationList">
+        <option value="b72"></option>
+        <option value="b99"></option>
+        <option value="b100"></option>
+    </datalist>
+</div>
+
+<!-- 数据准备 -->
+<div class="section">
+    <h3>数据准备</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>数据类型</th>
+                <th>时间范围</th>
+                <th>上传/下载状态</th>
+                <th>进度</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="uploadTableBody">
+            <tr>
+                <td>PWV / 气象 / 雨量筒</td>
+                <td id="dataTimeRange">2025/10/01 00:00 - 2025/10/21 12:00</td>
+                <td id="dataStatus">未操作</td>
+                <td><div class="progress-bar"><div class="progress blue" style="width:0%"></div></div></td>
+                <td>
+                    <button class="btn" onclick="openDownloadModal()">下载</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- 数据整合结果 -->
+<div class="section">
+    <h3>数据整合结果</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>数据集名称</th>
+                <th>站点编号</th>
+                <th>站点名称</th>
+                <th>时间范围</th>
+                <th>创建时间</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="datasetTableBody"></tbody>
+    </table>
+    <div id="datasetFooter" style="display:flex; justify-content: space-between; align-items: center; margin-top:10px;">
+        <div id="datasetCount"></div>
+        <div class="pagination" id="datasetPagination"></div>
+    </div>
+</div>
+
+<!-- 弹框 -->
+<div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalContent">
+        <div id="modalBody"></div>
+        <div style="text-align:right; margin-top:10px;">
+            <button class="btn" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='libs/plotly-2.32.0.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/papaparse.min.js') }}"></script>
+<script src="{{ url_for('static', filename='libs/flatpickr.min.js') }}"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

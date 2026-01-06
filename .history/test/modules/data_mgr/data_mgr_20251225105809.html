@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="data_mgr.css">
+</head>
+<body>
+    <div class="module-page">
+        <h3>数据下载管理</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>数据类型</th>
+                    <th>时间范围</th>
+                    <th>状态</th>
+                    <th>进度</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>PWV 数据</td>
+                    <td>2024-11-01 / 2024-11-28</td>
+                    <td><span class="status success">已完成</span></td>
+                    <td><div class="bar"><div class="fill" style="width:100%"></div></div></td>
+                    <td rowspan="3" class="op-cell">
+                        <button class="btn-up">⬆ PWV上传</button>
+                        <button class="btn-up">⬆ 气象上传</button>
+                        <button class="btn-up">⬆ 雨量上传</button>
+                        <div class="divider"></div>
+                        <button class="btn-dl">⬇ 下载整合数据集</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>气象数据</td>
+                    <td>-</td>
+                    <td><span class="status ongoing">下载中</span></td>
+                    <td><div class="bar"><div class="fill" style="width:45%"></div></div></td>
+                </tr>
+                <tr>
+                    <td>雨量数据</td>
+                    <td>-</td>
+                    <td><span class="status waiting">未开始</span></td>
+                    <td><div class="bar"><div class="fill" style="width:0%"></div></div></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

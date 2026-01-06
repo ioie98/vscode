@@ -1,0 +1,2 @@
+import clickhouse_connect
+print(clickhouse_connect.__version__)

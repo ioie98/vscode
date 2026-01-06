@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-logo">北斗司雨</div>
+        <div class="nav-item active" data-url="data_mgr/data_mgr.html">数据管理</div>
+        <div class="nav-item" data-url="model_train/model_train.html">模型训练</div>
+        <div class="nav-item" data-url="history/history.html">历史任务</div>
+        <div class="nav-item" data-url="model_verify/model_verify.html">模型验证</div>
+    </div>
+    
+    <div class="main-view">
+        <div class="top-header">
+            <span id="current-module-title">数据管理</span>
+        </div>
+        <!-- 模块载入区域 -->
+        <iframe id="module-frame" src="modules/data_mgr/data_mgr.html" frameborder="0" style="width:100%; height:100%;"></iframe>
+    </div>
+
+    <script>
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.onclick = function() {
+                document.querySelector('.nav-item.active').classList.remove('active');
+                this.classList.add('active');
+                document.getElementById('module-frame').src = 'modules/' + this.dataset.url;
+                document.getElementById('current-module-title').innerText = this.innerText;
+            };
+        });
+    </script>
+</body>
+</html>

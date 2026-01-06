@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>北斗司雨 - 智能模型控制台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <div class="logo">北斗司雨平台</div>
+        <nav class="nav-menu">
+            <div class="nav-item active" data-url="modules/data_mgr/data_mgr.html">数据管理</div>
+            <div class="nav-item" data-url="modules/model_train/model_train.html">模型训练</div>
+            <div class="nav-item" data-url="modules/history/history.html">历史任务</div>
+            <div class="nav-item" data-url="#">模型验证</div>
+            <div class="nav-item" data-url="#">模型管理</div>
+            <div class="nav-item" data-url="#">报告导出</div>
+            <div class="nav-item" data-url="#">站点管理</div>
+        </nav>
+    </aside>
+
+    <!-- 主主体 -->
+    <main class="main-body">
+        <!-- 全局顶栏：项目和站点选择 -->
+        <header class="global-header">
+            <div class="select-area">
+                <label>项目：</label>
+                <select id="proj">
+                    <option>承德水利项目</option>
+                    <option>武汉气象项目</option>
+                </select>
+                <label style="margin-left:20px">添加站点：</label>
+                <input type="text" id="siteInput" placeholder="输入站号...">
+                <button class="btn-add" onclick="addTag()">添加</button>
+                <div id="tagContainer" class="tag-container"></div>
+            </div>
+            <div class="user-info">Admin | <a href="#">退出</a></div>
+        </header>
+
+        <!-- 模块载入区 (通过 iframe 载入子页面) -->
+        <div class="iframe-container">
+            <iframe id="contentFrame" src="modules/data_mgr/data_mgr.html"></iframe>
+        </div>
+    </main>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
