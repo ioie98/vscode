@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="libs/flatpickr.min.css" />
 
     <style>
+        /*页面整体样式*/
         body {
             font-family: 'Segoe UI', sans-serif;
             margin: 0;
@@ -16,6 +17,7 @@
             color: #333;
         }
 
+        /*页面标题*/
         h1 {
             text-align: center;
             padding: 24px;
@@ -27,21 +29,22 @@
             box-shadow: 0 3px 8px rgba(0,0,0,0.1);
             position: relative;
         }
-
         h1::before {
-            content: "📈";
+            content: "📈"; /* 左侧显示图标 */
             position: absolute;
             left: 24px;
             top: 22px;
             font-size: 24px;
         }
 
+        /* 页面内容 */
         .container {
             padding: 20px;
             max-width: 1400px;
             margin: auto;
         }
 
+        /* 上传、选择日期、频率按钮 */
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -64,6 +67,7 @@
             font-size: 14px;
         }
 
+        /* 按钮样式 */
         .controls button {
             background-color: #1f77b4;
             color: white;
@@ -71,12 +75,12 @@
             border: none;
             transition: all 0.3s;
         }
-
         .controls button:hover {
             background-color: #155a91;
             transform: translateY(-2px);
         }
 
+        /* 上传按钮 */
         .upload-btn {
             background-color: #1f77b4;
             color: white;
@@ -87,15 +91,14 @@
             border: none;
             display: inline-block;
         }
-
         .upload-btn:hover {
             background-color: #155a91;
         }
-
         #fileInput {
-            display: none;
+            display: none; /*label点击*/
         }
 
+        /* 加载提示 */
         #loading {
             text-align: center;
             padding: 15px;
@@ -104,7 +107,6 @@
             display: none;
             user-select: none;
         }
-
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #1f77b4;
@@ -116,30 +118,22 @@
             vertical-align: middle;
             margin-right: 10px;
         }
-
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
+        /* 指标展示区 */
         .metrics {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 15px;
             margin: 20px 0;
         }
-
         @keyframes fadeUp {
-            0% {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            100% {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
-
         .metric {
             background: linear-gradient(145deg, #fdfdfd, #e8f3ff);
             padding: 15px;
@@ -148,18 +142,13 @@
             text-align: center;
             font-size: 16px;
             transition: all 0.3s ease;
-            position: relative;
             animation: fadeUp 0.6s ease both;
-            user-select: none;
         }
-
         .metric:hover {
             transform: translateY(-5px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
             background-color: #f0f8ff;
-            z-index: 1;
         }
-
         .metric b {
             display: block;
             font-size: 18px;
@@ -167,27 +156,27 @@
             margin-bottom: 5px;
         }
 
+        /* 图表容器 */
         #chart {
             background: linear-gradient(135deg, #ffffff, #f0f8ff);
             padding: 20px;
             border-radius: 14px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             margin-top: 25px;
-            transition: all 0.3s ease-in-out;
             border: 1px solid #d8eafd;
+            transition: all 0.3s ease-in-out;
         }
-
         #chart:hover {
             transform: scale(1.01);
         }
 
+        /* 水利指标面板 */
         .dashboard {
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
             margin: 20px 0;
         }
-
         .panel {
             flex: 1;
             min-width: 300px;
@@ -196,7 +185,6 @@
             border-radius: 12px;
             box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
         }
-
         .panel-title {
             font-size: 18px;
             font-weight: bold;
@@ -207,13 +195,11 @@
             padding-bottom: 10px;
             border-bottom: 1px solid #eee;
         }
-
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 12px;
         }
-
         .metric-box {
             background: #f8f9fa;
             padding: 12px;
@@ -222,38 +208,35 @@
             border: 1px solid #eee;
             transition: all 0.3s;
         }
-
         .metric-box:hover {
             transform: translateY(-3px);
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             background: #e9f4ff;
         }
-
         .metric-box b {
             display: block;
             font-size: 16px;
             margin-bottom: 8px;
             color: #1f77b4;
         }
-
         .metric-box span {
             font-size: 13px;
             color: #666;
             line-height: 1.5;
         }
 
+        /* 文件名展示 */
         .file-name {
             display: flex;
-            justify-content: center;    /* 水平居中 */
-            align-items: center;        /* 垂直居中 */
-            max-width: 200px;  
+            justify-content: center;
+            align-items: center;
+            max-width: 200px;
             margin-left: 10px;
             font-size: 14px;
             color: #333;
-            vertical-align: middle;
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis; 
+            text-overflow: ellipsis;
             border: 1px solid #ddd;
             padding: 4px 8px;
             border-radius: 6px;
@@ -261,54 +244,45 @@
             font-weight: bold;
         }
 
-
-        @media (max-width: 768px) {
-            .controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .controls input,
-            .controls select,
-            .controls button {
-                width: 100%;
-            }
-            .dashboard {
-                flex-direction: column;
-            }
-            #chart {
-                height: 400px;
-            }
-        }
     </style>
 </head>
 <body>
+    <!-- 页面标题 -->
     <h1>预测分析系统</h1>
+
     <div class="container">
+        <!-- 控制面板 -->
         <div class="controls">
             <label for="fileInput" class="upload-btn">上传CSV文件</label>
             <input type="file" id="fileInput" accept=".csv" />
             <span id="fileName" class="file-name">未选择文件</span>
             
+            <!-- 频率选择 -->
             <select id="freqSelect">
                 <option value="15min">15分钟</option>
                 <option value="1H">1小时</option>
             </select>
+
+            <!-- 日期选择器 -->
             <input type="text" id="startDate" placeholder="开始日期" />
             <input type="text" id="endDate" placeholder="结束日期" />
+
+            <!-- 功能按钮 -->
             <button onclick="render()">分析并绘图</button>
             <button onclick="resetDateRange()">重置时间范围</button>
             <button onclick="setRecentDays(7)">近7天</button>
             <button onclick="setRecentDays(30)">近30天</button>
         </div>
 
-
-
+        <!-- 加载提示 -->
         <div id="loading"><span class="loader"></span>正在加载数据，请稍候...</div>
         
+        <!-- 水利指标分析面板 -->
         <div class="dashboard">
             <div class="panel">
                 <div class="panel-title"><i>💧</i>水利指标分析(小时级雨量)</div>
                 <div class="metrics-grid" id="waterMetrics">
+                    <!-- 默认填充值 -->
                     <div class="metric-box">
                         <b>0-5mm</b>
                         <span>MAE: 0<br>RMSE: 0<br>累计小时数: 0</span>
@@ -329,18 +303,19 @@
             </div>
         </div>
 
+        <!-- 主指标面板 -->
         <div class="metrics" id="metrics"></div>
         
+        <!-- 图表 -->
         <div id="chart" style="height: 600px;"></div>
     </div>
 
     <script>
         let rawData = [], df15min = [];
-
+        /* 日期解析：支持 2025-06-01 和 2025/6/1 */
         function parseDate(str) {
             if (!str) return null;
             const dateTimeParts = str.trim().split(' ');
-            // 既支持 2025-06-01 也支持 2025/6/1
             const dateParts = dateTimeParts[0].includes('-')
                 ? dateTimeParts[0].split('-')
                 : dateTimeParts[0].split('/');
@@ -361,7 +336,7 @@
             );
         }
 
-
+        /* CSV文件解析 */
         function parseCSV(file) {
             document.getElementById('loading').style.display = 'block';
             Papa.parse(file, {
@@ -385,7 +360,7 @@
                 }
             });
         }
-
+        /* 数据按小时聚合：每小时包含前45分钟数据 */
         function aggregateHourly(data) {
             const result = [];
             const hourMap = new Map();
@@ -424,7 +399,7 @@
             return result;
         }
 
-
+        /* 计算主指标 (RMSE、R²、POD、FAR、TS) */
         function computeMetrics(data, threshold = 0.1) {
             if (data.length === 0) return {};
             
@@ -471,7 +446,7 @@
                 ts,
             };
         }
-
+        /* 计算水利指标（分雨量段统计） */
         function computeWaterMetrics(data) {
             const ranges = [
                 { min: 0, max: 5, name: '0-5mm' },
@@ -503,7 +478,7 @@
                 };
             });
         }
-
+        /* 更新水利指标 */
         function updateWaterMetricsPanel(metrics) {
             const container = document.getElementById('waterMetrics');
             container.innerHTML = metrics.map(metric => `
@@ -626,7 +601,7 @@
                 height: 500
             });
         }
-
+        /* 重置时间范围 */
         function resetDateRange() {
             if (rawData.length === 0) return;
             
@@ -641,7 +616,7 @@
             
             render();
         }
-
+        /* 设置近几天的时间范围 */
         function setRecentDays(days) {
             if (rawData.length === 0) return;
             
@@ -673,14 +648,14 @@
             defaultHour: 0,
             defaultMinute: 0
         });
-
+        /* 文件上传 */
         document.getElementById('fileInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             const fileNameSpan = document.getElementById('fileName');
             if (file) {
                 parseCSV(file);
                 fileNameSpan.textContent = file.name;
-                fileNameSpan.title = file.name; // 鼠标悬停时显示完整文件名
+                fileNameSpan.title = file.name; //显示完整文件名
             } else {
                 fileNameSpan.textContent = "未选择文件";
                 fileNameSpan.title = "";

@@ -1,0 +1,35 @@
+第一步：安装本地 MySQL 数据库 environment
+下载 MySQL:
+访问 MySQL 官网下载 MySQL Community Server ( 8.0 版本)。
+下载数据库管理工具:
+下载 DBeaver (免费)
+连接数据库:
+打开 DBeaver，点击“连接” -> “MySQL”。
+主机：localhost，端口：3306。
+用户名：root，密码：你安装时设置的密码（phpStudy默认通常是 root）。
+新建查询:
+连接成功后，右键连接名 -> “新建数据库” (名字叫 dormitory_repair_db) -> 字符集选 utf8mb4。
+
+_____________________________________________________________________________________________________________________
+第二步：安装 Node.js (基础环境)
+1、去官网下载：Node.js 官网
+下载 LTS 版本 (长期支持版)，一路“下一步”安装。
+验证安装：打开电脑的 CMD (命令提示符) 或 PowerShell，输入 node -v，如果有版本号跳出来（比如 v18.x.x 或 v20.x.x），说明环境好了。
+2、创建 Vue 项目
+找一个你存放代码的文件夹（比如 D盘的 Project），在地址栏输入 cmd 回车，或者在该目录下右键打开终端。
+执行创建命令：
+npm create vue@latest
+按提示选择 (用键盘上下键和回车)：
+Project name: dorm-frontend (项目名)
+Add TypeScript? -> No (我们要用 JS，和给你的代码一致)
+Add JSX Support? -> No
+Add Vue Router? -> Yes (我们需要路由)
+Add Pinia? -> No (暂时不用，用 localStorage 简单点)
+Add Vitest/Cypress/ESLint? -> No (新手先不要这些复杂的配置)
+进入项目并安装依赖：
+cd dorm-frontend
+npm install
+3、安装 Element Plus (UI组件库)
+因为代码里用了 <el-table>, <el-button> 这些组件，你需要安装它。
+在终端里继续输入：
+npm install element-plus @element-plus/icons-vue

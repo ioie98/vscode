@@ -151,9 +151,13 @@
     }
 
     #card-merge .row label {
-      width: 120px;
+      width: 130px;
       color: #8a96b3;
     }
+    #card-jingchu .row label {
+    width: 160px; 
+    color: #8a96b3;
+}
   </style>
 </head>
 <body>
@@ -180,25 +184,39 @@
         <div class="log" id="log-device"></div>
       </div>
 
-      <!-- 模块2：荆楚水库数据处理 -->
+      <!-- 模块2：荆楚水库数据合并 -->
       <div class="card" id="card-jingchu">
-        <h3>荆楚水库数据处理</h3>
-        <div class="row"><input id="jc-input" placeholder="荆楚文件夹路径(./jingchu_data/8month)" value=""></div>
-        <div class="row"><input id="jc-data" placeholder="设备数据文件夹路径(./jingchu_data/data_8month)" value=""></div>
-        <div class="row"><input id="jc-pred" placeholder="中间文件夹路径(./jingchu_data/jingchu_result_8month)" value=""></div>
-        <div class="row"><input id="jc-out" placeholder="输出文件夹路径(./device_data_8month)" value=""></div>
-        <div class="row"><button onclick="runJingchu()">运行处理</button></div>
+        <h3>荆楚水库数据合并</h3>
+        <div class="row">
+          <label>荆楚文件夹:</label>
+          <input id="jc-input" placeholder="./jingchu_data/8month" value="./jingchu_data/8month">
+        </div>
+        <div class="row">
+          <label>设备文件夹:</label>
+          <input id="jc-data" placeholder="./jingchu_data/data_8month" value="./jingchu_data/data_8month">
+        </div>
+        <div class="row">
+          <label>中间文件夹:</label>
+          <input id="jc-pred" placeholder="./jingchu_data/jingchu_result_8month" value="./jingchu_data/jingchu_result_8month">
+        </div>
+        <div class="row">
+          <label>输出文件夹:</label>
+          <input id="jc-out" placeholder="./jingchu_data/device_data_8month" value="./jingchu_data/device_data_8month">
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button onclick="runJingchu()">运行处理</button>
+        </div>
         <div class="log" id="log-jingchu"></div>
       </div>
 
       <!-- 模块3：ERA5 下载 -->
       <div class="card" id="card-era5">
         <h3>ERA5 数据下载/处理 <span class="badge">ERA5-Land</span></h3>
-        <div class="row"><input id="era-device" placeholder="设备名" value=""></div>
-        <div class="row"><input id="era-sy" placeholder="开始年" value=""><input id="era-sm" placeholder="开始月" value=""></div>
-        <div class="row"><input id="era-ey" placeholder="结束年" value=""><input id="era-em" placeholder="结束月" value=""></div>
-        <div class="row"><input id="era-lat" placeholder="纬度" value=""><input id="era-lon" placeholder="经度" value=""></div>
-        <div class="row"><input id="era-area" placeholder="经纬度范围 北,西,南,东" value=""></div>
+        <div class="row"><input id="era-device" placeholder="设备名(b100)" value=""></div>
+        <div class="row"><input id="era-sy" placeholder="开始年(2025)" value=""><input id="era-sm" placeholder="开始月(01)" value=""></div>
+        <div class="row"><input id="era-ey" placeholder="结束年(2025)" value=""><input id="era-em" placeholder="结束月(02)" value=""></div>
+        <div class="row"><input id="era-lat" placeholder="纬度(31.39)" value=""><input id="era-lon" placeholder="经度(115.04)" value=""></div>
+        <div class="row"><input id="era-area" placeholder="经纬度范围 北,西,南,东(32.23,112.32,30.99,115.88)" value=""></div>
         <div class="row"><button onclick="runERA5()">下载并处理</button></div>
         <div class="log" id="log-era5"></div>
       </div>
@@ -222,23 +240,23 @@
       <h3>月度数据合并</h3>
 
       <div class="row">
-        <label>A月文件:</label>
-        <input id="m-56" placeholder="./merge_month/5-6-extracted_files" value="">
+        <label>A月文件夹:</label>
+        <input id="m-56" placeholder="./merge_month/5-6-extracted_files" value="./merge_month/5-6-extracted_files">
       </div>
 
       <div class="row">
-        <label>B月文件:</label>
-        <input id="m-7" placeholder="./merge_month/7-extracted_files" value="">
+        <label>B月文件夹:</label>
+        <input id="m-7" placeholder="./merge_month/7-extracted_files" value="./merge_month/7-extracted_files">
       </div>
 
       <div class="row">
-        <label>C月文件:</label>
-        <input id="m-8" placeholder="./merge_month/8-extracted_files" value="">
+        <label>C月文件夹:</label>
+        <input id="m-8" placeholder="./merge_month/8-extracted_files" value="./merge_month/8-extracted_files">
       </div>
 
       <div class="row">
-        <label>合并文件:</label>
-        <input id="m-out" placeholder="./merge_month/5-8-merged_files" value="">
+        <label>输出文件夹:</label>
+        <input id="m-out" placeholder="./merge_month/5-8-merged_files" value="./merge_month/5-8-merged_files">
       </div>
 
 
@@ -272,39 +290,62 @@ function log(el, text, cls=""){
   box.scrollTop = box.scrollHeight;
 }
 
-async function runDevice(){
-  const start = document.getElementById('dev-start').value.trim();
-  const end = document.getElementById('dev-end').value.trim();
-  const devs = document.getElementById('dev-list').value.trim().split(',').map(s=>s.trim()).filter(Boolean);
+async function runDevice() {
+  const start = document.getElementById('dev-start').value.trim(); // 只要 'YYYY-MM-DD'
+  const end   = document.getElementById('dev-end').value.trim();
+  const devs = document.getElementById('dev-list').value
+                 .trim().split(',')
+                 .map(s=>s.trim())
+                 .filter(Boolean);
+
   const cfg = {
-    host: document.getElementById('ch-host').value.trim(),
-    port: parseInt(document.getElementById('ch-port').value.trim() || "80",10),
-    username: document.getElementById('ch-user').value.trim(),
-    password: document.getElementById('ch-pass').value.trim(),
-    database: document.getElementById('ch-db').value.trim(),
+    host: document.getElementById('ch-host').value.trim() || 'bytehouse.huoshan.accurain.cn',
+    port: parseInt(document.getElementById('ch-port').value.trim() || "80", 10),
+    username: document.getElementById('ch-user').value.trim() || 'accurain_guest',
+    password: document.getElementById('ch-pass').value.trim() || 'V3VuWS7%FWs@u',
+    database: document.getElementById('ch-db').value.trim() || 'accurain',
   };
-  document.getElementById('log-device').textContent="";
+
+  document.getElementById('log-device').textContent = "";
   log('log-device', '开始执行...');
-  try{
-    const res = await fetch('/api/device-download', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({start_date:start, end_date:end, devices:devs, clickhouse_config:cfg})
+
+  try {
+    const res = await fetch('/api/query-devices', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        start_date: start,
+        end_date: end,
+        devices: devs,
+        clickhouse_config: cfg
+      })
     });
+
     const j = await res.json();
-    if(!j.ok){ log('log-device', '❌ ' + j.error, 'err'); return; }
-    log('log-device', '✅ 完成。输出：', 'ok');
-    j.results.forEach(r=>{
-      if(r.error){ log('log-device', r.device + ' -> 错误: ' + r.error, 'err'); }
-      else{
-        log('log-device', r.device + ' -> ' + r.folder);
-        r.files.forEach(f=> log('log-device', '  - ' + f));
-      }
-    });
-  }catch(e){
+    if(j.error){
+      log('log-device', '❌ ' + j.error, 'err');
+      return;
+    }
+
+    log('log-device', '✅ 完成。');
+    if(j.results){
+      j.results.forEach(r => {
+        if(r.error){
+          log('log-device', r.device + ' -> 错误: ' + r.error, 'err');
+        } else {
+          log('log-device', r.device + ' -> ' + r.folder);
+          r.files.forEach(f => log('log-device', '  - ' + f));
+        }
+      });
+    }
+
+  } catch(e) {
     log('log-device', '❌ ' + e.message, 'err');
   }
 }
+
+
+
 
 async function runJingchu(){
   const payload = {
@@ -321,7 +362,7 @@ async function runJingchu(){
     if(!j.ok){ log('log-jingchu','❌ '+j.error,'err'); return; }
     j.logs.forEach(t=>log('log-jingchu',t));
     log('log-jingchu','✅ 完成','ok');
-    log('log-jingchu','预测输出: '+ j.pred_folder);
+    log('log-jingchu','荆楚数据格式处理: '+ j.pred_folder);
     log('log-jingchu','合并输出: '+ j.output_folder);
   }catch(e){ log('log-jingchu','❌ '+e.message,'err'); }
 }
@@ -380,22 +421,57 @@ async function runMetrics(){
 }
 
 async function runMerge(){
-  const payload = {
-    folder_5_6: document.getElementById('m-56').value.trim(),
-    folder_7: document.getElementById('m-7').value.trim(),
-    folder_8: document.getElementById('m-8').value.trim(),
-    output_folder: document.getElementById('m-out').value.trim(),
-  };
-  document.getElementById('log-merge').textContent="";
-  log('log-merge','开始合并...');
-  try{
-    const res = await fetch('/api/merge-months', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    const j = await res.json();
-    if(!j.ok){ log('log-merge','❌ '+j.error,'err'); return; }
-    j.logs.forEach(t=>log('log-merge',t));
-    (j.outputs||[]).forEach(p=>log('log-merge','生成: '+p));
-    log('log-merge','✅ 完成','ok');
-  }catch(e){ log('log-merge','❌ '+e.message,'err'); }
+    const folder_56 = document.getElementById('m-56').value.trim();
+    const folder_7 = document.getElementById('m-7').value.trim();
+    const folder_8 = document.getElementById('m-8').value.trim();
+    const output_folder = document.getElementById('m-out').value.trim();
+    const log = document.getElementById('log-merge');
+
+    log.textContent = ""; // 清空日志
+
+    // 输出文件夹必须填写
+    if (!output_folder) {
+        log.textContent = "❌ 请填写输出文件夹路径";
+        return;
+    }
+
+    // 收集非空输入文件夹
+    const folders = [folder_56, folder_7, folder_8].filter(f => f);
+
+    if (folders.length < 2) {
+        log.textContent = "❌ 请至少填写两个需要合并的文件夹路径";
+        return;
+    }
+
+    log.textContent = "⏳ 正在合并，请稍候...";
+
+    // 构建提交数据
+    const payload = {
+        folder_5_6: folder_56,
+        folder_7: folder_7,
+        folder_8: folder_8,
+        output_folder: output_folder
+    };
+
+    fetch('/api/merge-months', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            log.textContent = "❌ " + data.error;
+        } else {
+            let msg = "✅ 合并完成！\n";
+            if (data.logs) msg += data.logs.join("\n") + "\n";
+            if (data.outputs) msg += "输出文件：" + data.outputs.join(", ");
+            log.textContent = msg;
+        }
+    })
+    .catch(err => {
+        log.textContent = "❌ 合并出错：" + err;
+    });
 }
 </script>
 </body>

@@ -339,8 +339,7 @@
         }
 
 
-        function parseCSV(file) {
-            document.getElementById('loading').style.display = 'block';
+        function parseCSV(file) {            document.getElementById('loading').style.display = 'block';
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: true,
